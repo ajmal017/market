@@ -25,5 +25,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		vb.name = machineName
 	end
 
+	config.vm.provision "shell", path: "provision/init.sh"
+
 	config.vm.network "forwarded_port", host: 8080, guest: 80
 end
