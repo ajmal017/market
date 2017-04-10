@@ -1,0 +1,40 @@
+{
+	"name": "sharkodlak/market",
+	"description": "Market visualizer.",
+	"keywords": [
+		"market"
+	],
+	"homepage": "https://github.com/Sharkodlak/market",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Pavel Štětina",
+			"email": "github@shark.kom.cz",
+			"role": "Architect/Developer"
+		}
+	],
+	"require": {
+		"sharkodlak/exception": "*",
+		"php": ">=5.6.13"
+	},
+	"require-dev": {
+		"sharkodlak/development": "*"
+	},
+	"suggest": {
+		"ext-pgsql": "PostgreSQL module."
+	},
+	"support": {
+		"issues": "https://github.com/sharkodlak/market/issues",
+		"wiki": "https://github.com/sharkodlak/market/wiki"
+	},
+	"autoload": {
+		"psr-4": {
+			"Sharkodlak\\Market\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Sharkodlak\\Market\\": "tests/"
+		}
+	}
+}
