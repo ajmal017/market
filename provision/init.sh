@@ -8,7 +8,7 @@ fi
 apt-get update
 apt-get install -y curl git nginx php7.1-fpm php7.1-zip unzip zip
 
-if [ ! /usr/local/bin/composer ]; then
+if [ ! -e /usr/local/bin/composer ]; then
 	php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
 	EXPECTED_SIGNATURE=$(wget -q -O - https://composer.github.io/installer.sig)
 	ACTUAL_SIGNATURE=$(php -r "echo hash_file('SHA384', '/tmp/composer-setup.php');")
@@ -16,7 +16,7 @@ if [ ! /usr/local/bin/composer ]; then
 	if [ "$EXPECTED_SIGNATURE" != "$ACTUAL_SIGNATURE" ]; then
 		>&2 echo 'ERROR: Invalid composer installer signature'
 	else
-		sudo php /tmp/composer-setup.php -- --install-dir=/usr/local/bin --filename=composer
+		php /tmp/composer-setup.php -- --install-dir=/usr/local/bin --filename=composer
 	fi
 fi
 
