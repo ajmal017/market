@@ -1,4 +1,5 @@
 .vagrant
 composer.lock
+provision/.private
 src/html
 vendor
