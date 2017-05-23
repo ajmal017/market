@@ -6,7 +6,7 @@ if [ ! -e /etc/apt/sources.list.d/sury.php.list ]; then
 fi
 
 apt-get update
-apt-get install -y curl git nginx php7.1-fpm php7.1-zip unzip zip
+apt-get install -y curl git nginx php7.1-cli php7.1-fpm php7.1-zip unzip zip
 
 if [ ! -e /usr/local/bin/composer ]; then
 	php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"

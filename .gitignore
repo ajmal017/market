@@ -2,5 +2,5 @@
 composer.lock
 provision/.private
 src/html
-src/info.php
+src/www/info.php
 vendor
