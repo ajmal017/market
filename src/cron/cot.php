@@ -1,9 +1,10 @@
 <?php
 
 const COT_URL = 'http://www.cftc.gov/files/dea/history/deahistfo2017.zip';
-const READ_ONLY = 'r';
 const COT_ZIP = '/tmp/cot.zip';
 const COT_UNZIP = 'zip://' . COT_ZIP . '#annualof.txt';
+const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
+const READ_ONLY = 'r';
 
 if (!file_exists(COT_ZIP)) {
 	copy(COT_URL, COT_ZIP);
@@ -140,6 +141,10 @@ $fieldNames = [
 	"CFTC Market Code in Initials (Quotes)",
 	"CFTC Commodity Code (Quotes)",
 ];
+$exchanges = [];
+$markets = [];
+$pdo = new \PDO('uri:file://' . DB_CONNECT);
+$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $firstLine = true;
 $fp = fopen(COT_UNZIP, READ_ONLY);
 while ($line = fgetcsv($fp)) {
@@ -147,12 +152,25 @@ while ($line = fgetcsv($fp)) {
 		$unknownFieldNames = array_diff($line, $fieldNames);
 		if (!empty($unknownFieldNames)) {
 			print_r($unknownFieldNames);
-			trigger_error('Unknown field names', E_USER_ERROR);
+			trigger_error('Unknown field names!', E_USER_ERROR);
 		}
 		unset($unknownFieldNames);
 		$firstLine = false;
 	} else {
-		var_dump($line);
-		exit('asdfghj');
+		list($market, $exchange) = preg_split('~ - (?!.* - )~', $line[array_search('Market and Exchange Names', $fieldNames)]);
+		if (!in_array($exchange, $exchanges)) {
+			$exchanges[] = $exchange;
+			$sql = "INSERT INTO exchange (name) SELECT ':exchange' WHERE NOT EXISTS (SELECT id FROM exchange WHERE name = :exchange) RETURNING id";
+			$prepare = $pdo->prepare($sql);
+			//$prepare->bindParam(':exchange', $exchange, PDO::PARAM_STR);
+			$success = $prepare->execute([':exchange' => $exchange]);
+			if (!$success) {
+				trigger_error('Exchange insertion failure!', E_USER_ERROR);
+			}
+		}
+		if (!in_array($market, $markets)) {
+			$markets[] = $market;
+		}
+
 	}
 }
