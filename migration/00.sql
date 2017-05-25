@@ -14,13 +14,13 @@ INSERT INTO exchange (name, same_exchange_id) VALUES ('ICE FUTURES ENERGY D', 3)
 
 CREATE TABLE instrument (
 	id SERIAL NOT NULL,
-	code CHAR(2) NOT NULL,
-	name VARCHAR(64),
 	exchange_id INTEGER,
+	name VARCHAR(64),
+	code CHAR(2),
 	contract_volume VARCHAR(64),
 	PRIMARY KEY (id),
-	UNIQUE (code),
-	UNIQUE (name)
+	UNIQUE (name),
+	UNIQUE (code)
 );
 
 INSERT INTO instrument (code, name, exchange_id, contract_volume) VALUES ('CC', 'COCOA', 1, '10 METRIC TONS'),

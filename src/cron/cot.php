@@ -140,7 +140,7 @@ class COT {
 		"CFTC Market Code in Initials (Quotes)",
 		"CFTC Commodity Code (Quotes)",
 	];
-	private $markets = [];
+	private $instruments = [];
 
 	public function __construct(\PDO $pdo) {
 		$this->pdo = $pdo;
@@ -158,19 +158,41 @@ class COT {
 		if (array_key_exists($exchange, $this->exchanges)) {
 			$exchangeId = $this->exchanges[$exchange];
 		} else {
+			$params = ['exchange' => $exchange];
 			$sql = "SELECT id FROM exchange WHERE name = :exchange";
 			$statement = $this->pdo->prepare($sql);
-			$success = $statement->execute(['exchange' => $exchange]);
+			$success = $statement->execute($params);
 			$exchangeId = $statement->fetchColumn();
 			if ($exchangeId === false) {
 				$sql = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
 				$statement = $this->pdo->prepare($sql);
-				$success = $statement->execute(['exchange' => $exchange]);
+				$success = $statement->execute($params);
 				$exchangeId = $statement->fetchColumn();
 			}
 			$this->exchanges[$exchange] = $exchangeId;
 		}
 		return $exchangeId;
+	}
+
+	public function getInstrumentId($exchangeId, $market) {
+		if (array_key_exists($market, $this->instruments)) {
+			$instrumentId = $this->instruments[$market];
+		} else {
+			$params = ['instrument' => $market];
+			$sql = "SELECT id FROM instrument WHERE name = :instrument";
+			$statement = $this->pdo->prepare($sql);
+			$success = $statement->execute($params);
+			$instrumentId = $statement->fetchColumn();
+			if ($instrumentId === false) {
+				$params['exchangeId'] = $exchangeId;
+				$sql = "INSERT INTO instrument (exchange_id, name) VALUES (:exchangeId, :instrument) RETURNING id";
+				$statement = $this->pdo->prepare($sql);
+				$success = $statement->execute($params);
+				$instrumentId = $statement->fetchColumn();
+			}
+			$this->instruments[$market] = $instrumentId;
+		}
+		return $instrumentId;
 	}
 
 	public function indexOfFieldName($fieldName) {
@@ -195,8 +217,6 @@ while ($line = fgetcsv($fp)) {
 		$fieldIndex = $cot->indexOfFieldName('Market and Exchange Names');
 		list($market, $exchange) = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
 		$exchangeId = $cot->getExchangeId($exchange);
-		if (!in_array($market, $markets)) {
-			$markets[] = $market;
-		}
+		$instrumentId = $cot->getInstrumentId($exchangeId, $market);
 	}
 }
