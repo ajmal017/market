@@ -1,12 +1,16 @@
 CREATE TABLE exchange (
 	id SERIAL NOT NULL,
 	name VARCHAR(64) NOT NULL,
+	same_exchange_id INTEGER,
 	PRIMARY KEY (id),
-	UNIQUE (name)
+	UNIQUE (name),
+	FOREIGN KEY (same_exchange_id) REFERENCES exchange
 );
 
 INSERT INTO exchange (name) VALUES ('ICE FUTURES U.S.'),
-	('CHICAGO BOARD OF TRADE');
+	('CHICAGO BOARD OF TRADE'),
+	('ICE FUTURES ENERGY DIV');
+INSERT INTO exchange (name, same_exchange_id) VALUES ('ICE FUTURES ENERGY D', 3);
 
 CREATE TABLE instrument (
 	id SERIAL NOT NULL,
