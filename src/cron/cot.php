@@ -161,52 +161,44 @@ class COT {
 		}
 	}
 
-	public function getExchangeId($exchange) {
-		if (array_key_exists($exchange, $this->exchanges)) {
-			$exchangeId = $this->exchanges[$exchange];
-		} else {
+	private function selectOrInsertReturnsId(string $select, array $params, string $insert, array $additionalFields = []) {
+		$statement = $this->pdo->prepare($select);
+		$success = $statement->execute($params);
+		$id = $statement->fetchColumn();
+		if ($id === false) {
+			$statement = $this->pdo->prepare($insert);
+			$success = $statement->execute($params + $additionalFields);
+			$id = $statement->fetchColumn();
+		}
+		return $id;
+	}
+
+	public function getExchangeId(string $exchange) {
+		if (!array_key_exists($exchange, $this->exchanges)) {
+			$select = "SELECT id FROM exchange WHERE name = :exchange";
 			$params = ['exchange' => $exchange];
-			$sql = "SELECT id FROM exchange WHERE name = :exchange";
-			$statement = $this->pdo->prepare($sql);
-			$success = $statement->execute($params);
-			$exchangeId = $statement->fetchColumn();
-			if ($exchangeId === false) {
-				$sql = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
-				$statement = $this->pdo->prepare($sql);
-				$success = $statement->execute($params);
-				$exchangeId = $statement->fetchColumn();
-			}
-			$this->exchanges[$exchange] = $exchangeId;
+			$insert = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
+			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($select, $params, $insert);
 		}
-		return $exchangeId;
+		return $this->exchanges[$exchange];
 	}
 
-	public function getInstrumentId($exchangeId, $market) {
-		if (array_key_exists($market, $this->instruments)) {
-			$instrumentId = $this->instruments[$market];
-		} else {
+	public function getInstrumentId(int $exchangeId, string $market) {
+		if (!array_key_exists($market, $this->instruments)) {
+			$select = "SELECT id FROM instrument WHERE name = :instrument";
 			$params = ['instrument' => $market];
-			$sql = "SELECT id FROM instrument WHERE name = :instrument";
-			$statement = $this->pdo->prepare($sql);
-			$success = $statement->execute($params);
-			$instrumentId = $statement->fetchColumn();
-			if ($instrumentId === false) {
-				$params['exchangeId'] = $exchangeId;
-				$sql = "INSERT INTO instrument (exchange_id, name) VALUES (:exchangeId, :instrument) RETURNING id";
-				$statement = $this->pdo->prepare($sql);
-				$success = $statement->execute($params);
-				$instrumentId = $statement->fetchColumn();
-			}
-			$this->instruments[$market] = $instrumentId;
+			$insert = "INSERT INTO instrument (exchange_id, name) VALUES (:exchangeId, :instrument) RETURNING id";
+			$additionalFields = ['exchangeId' => $exchangeId];
+			$this->instruments[$market] = $this->selectOrInsertReturnsId($select, $params, $insert, $additionalFields);
 		}
-		return $instrumentId;
+		return $this->instruments[$market];
 	}
 
-	public static function indexOfFieldName($fieldName) {
+	public static function indexOfFieldName(string $fieldName) {
 		return array_search($fieldName, self::$fieldNames);
 	}
 
-	public function parseFile($filename) {
+	public function parseFile(string $filename) {
 		$firstLine = true;
 		$fp = fopen($filename, self::READ_ONLY);
 		while ($line = fgetcsv($fp)) {
@@ -215,10 +207,9 @@ class COT {
 				$firstLine = false;
 			} else {
 				$fieldIndex = $this->indexOfFieldName('Market and Exchange Names');
-				list($market, $exchange) = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
+				[$market, $exchange] = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
 				$exchangeId = $this->getExchangeId($exchange);
 				$instrumentId = $this->getInstrumentId($exchangeId, $market, $line[$this->indexOfFieldName('Contract Units')]);
-				var_dump($line);exit('asdfghjk');
 			}
 		}
 	}
