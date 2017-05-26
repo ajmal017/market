@@ -1,15 +1,14 @@
 <?php
 
-const COT_URL = 'http://www.cftc.gov/files/dea/history/deahistfo2017.zip';
-const COT_ZIP = '/tmp/cot.zip';
-const COT_UNZIP = 'zip://' . COT_ZIP . '#annualof.txt';
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
-const READ_ONLY = 'r';
 
 class COT {
-	private $pdo;
+	const READ_ONLY = 'r';
+	const URL = 'http://www.cftc.gov/files/dea/history/deahistfo2017.zip';
+	const ZIP = '/tmp/cot.zip';
+
 	private $exchanges = [];
-	private $fieldNames = [
+	private static $fieldNames = [
 		"Market and Exchange Names",
 		"As of Date in Form YYMMDD",
 		"As of Date in Form YYYY-MM-DD",
@@ -141,13 +140,21 @@ class COT {
 		"CFTC Commodity Code (Quotes)",
 	];
 	private $instruments = [];
+	private $pdo;
 
 	public function __construct(\PDO $pdo) {
 		$this->pdo = $pdo;
 	}
 
+	public static function copyMissingFile($filename = self::ZIP, $url = self::URL) {
+		if (!file_exists($filename)) {
+			copy($url, $filename);
+		}
+		return 'zip://' . $filename . '#annualof.txt';
+	}
+
 	public function checkFields($fields) {
-		$unknownFieldNames = array_diff($fields, $this->fieldNames);
+		$unknownFieldNames = array_diff($fields, self::$fieldNames);
 		if (!empty($unknownFieldNames)) {
 			print_r($unknownFieldNames);
 			throw new \Exception('Unknown field names!');
@@ -195,28 +202,32 @@ class COT {
 		return $instrumentId;
 	}
 
-	public function indexOfFieldName($fieldName) {
-		return array_search($fieldName, $this->fieldNames);
+	public static function indexOfFieldName($fieldName) {
+		return array_search($fieldName, self::$fieldNames);
+	}
+
+	public function parseFile($filename) {
+		$firstLine = true;
+		$fp = fopen($filename, self::READ_ONLY);
+		while ($line = fgetcsv($fp)) {
+			if ($firstLine) {
+				$this->checkFields($line);
+				$firstLine = false;
+			} else {
+				$fieldIndex = $this->indexOfFieldName('Market and Exchange Names');
+				list($market, $exchange) = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
+				$exchangeId = $this->getExchangeId($exchange);
+				$instrumentId = $this->getInstrumentId($exchangeId, $market, $line[$this->indexOfFieldName('Contract Units')]);
+				var_dump($line);exit('asdfghjk');
+			}
+		}
 	}
 }
 
-if (!file_exists(COT_ZIP)) {
-	copy(COT_URL, COT_ZIP);
-}
+
 
 $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $cot = new COT($pdo);
-$firstLine = true;
-$fp = fopen(COT_UNZIP, READ_ONLY);
-while ($line = fgetcsv($fp)) {
-	if ($firstLine) {
-		$cot->checkFields($line);
-		$firstLine = false;
-	} else {
-		$fieldIndex = $cot->indexOfFieldName('Market and Exchange Names');
-		list($market, $exchange) = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
-		$exchangeId = $cot->getExchangeId($exchange);
-		$instrumentId = $cot->getInstrumentId($exchangeId, $market);
-	}
-}
+$filename = $cot->copyMissingFile();
+$cot->parseFile($filename);
