@@ -7,6 +7,11 @@ class COT {
 	const URL = 'http://www.cftc.gov/files/dea/history/deahistfo2017.zip';
 	const ZIP = '/tmp/cot.zip';
 
+	public $counter = [
+		'exchange' => ['select' => 0, 'insert' => 0],
+		'instrument' => ['select' => 0, 'insert' => 0],
+		'cot' => ['select' => 0, 'insert' => 0],
+	];
 	private $exchanges = [];
 	private static $fieldNames = [
 		"Market and Exchange Names",
@@ -146,14 +151,14 @@ class COT {
 		$this->pdo = $pdo;
 	}
 
-	public static function copyMissingFile($filename = self::ZIP, $url = self::URL) {
+	public static function copyMissingFile(string $filename = self::ZIP, string $url = self::URL) {
 		if (!file_exists($filename)) {
 			copy($url, $filename);
 		}
 		return 'zip://' . $filename . '#annualof.txt';
 	}
 
-	public function checkFields($fields) {
+	public function checkFields(array $fields) {
 		$unknownFieldNames = array_diff($fields, self::$fieldNames);
 		if (!empty($unknownFieldNames)) {
 			print_r($unknownFieldNames);
@@ -161,35 +166,68 @@ class COT {
 		}
 	}
 
-	private function selectOrInsertReturnsId(string $select, array $params, string $insert, array $additionalFields = []) {
+	public static function filterColumns(array $line, array $filterFieldNames) {
+		$fieldNames = array_intersect(self::$fieldNames, $filterFieldNames);
+		var_dump($fieldNames);
+	}
+
+	private function selectOrInsertReturnsId(string $counterKey, string $select, array $params, string $insert, array $additionalFields = []) {
+		++$this->counter[$counterKey]['select'];
 		$statement = $this->pdo->prepare($select);
 		$success = $statement->execute($params);
 		$id = $statement->fetchColumn();
 		if ($id === false) {
 			$statement = $this->pdo->prepare($insert);
 			$success = $statement->execute($params + $additionalFields);
-			$id = $statement->fetchColumn();
+			if ($success) {
+				++$this->counter[$counterKey]['insert'];
+				$id = $statement->fetchColumn();
+			}
 		}
 		return $id;
 	}
 
 	public function getExchangeId(string $exchange) {
 		if (!array_key_exists($exchange, $this->exchanges)) {
+			$counterKey = 'exchange';
 			$select = "SELECT id FROM exchange WHERE name = :exchange";
 			$params = ['exchange' => $exchange];
 			$insert = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
-			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($select, $params, $insert);
+			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert);
 		}
 		return $this->exchanges[$exchange];
 	}
 
-	public function getInstrumentId(int $exchangeId, string $market) {
+	public function getInstrumentId(int $exchangeId, string $market, ?string $contractVolume) {
 		if (!array_key_exists($market, $this->instruments)) {
-			$select = "SELECT id FROM instrument WHERE name = :instrument";
+			$counterKey = 'instrument';
+			$select = "SELECT id, exchange_id, contract_volume FROM instrument WHERE name = :instrument";
 			$params = ['instrument' => $market];
-			$insert = "INSERT INTO instrument (exchange_id, name) VALUES (:exchangeId, :instrument) RETURNING id";
-			$additionalFields = ['exchangeId' => $exchangeId];
-			$this->instruments[$market] = $this->selectOrInsertReturnsId($select, $params, $insert, $additionalFields);
+			$insert = "INSERT INTO instrument (exchange_id, name, contract_volume) VALUES (:exchangeId, :instrument, :contractVolume) RETURNING id";
+			$additionalFields = ['exchangeId' => $exchangeId, 'contractVolume' => $contractVolume];
+			$this->instruments[$market] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert, $additionalFields);
+		}
+		return $this->instruments[$market];
+	}
+
+	public function processCot(int $instrumentId, string $date, int $hedgersLong, int $hedgersShort, int $swapLong, int $swapShort, int $managedLong, int $managedShort, int $otherLong, int $otherShort) {
+		if (!isset($this->cot[$instrumentId][$date])) {
+			$counterKey = 'cot';
+			$select = "SELECT instrument_id, date FROM cot WHERE instrument_id = :instrumentId AND date = :date";
+			$params = ['instrumentId' => $instrumentId, 'date' => $date];
+			$insert = "INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, managed_long, managed_short, other_long, other_short)
+				VALUES (:instrumentId, :date, :hedgersLong, :hedgersShort, :swapLong, :swapShort, :managedLong, :managedShort, :otherLong, :otherShort) RETURNING instrument_id, date";
+			$additionalFields = [
+				'hedgersLong' => $hedgersLong,
+				'hedgersShort' => $hedgersShort,
+				'swapLong' => $swapLong,
+				'swapShort' => $swapShort,
+				'managedLong' => $managedLong,
+				'managedShort' => $managedShort,
+				'otherLong' => $otherLong,
+				'otherShort' => $otherShort,
+			];
+			$this->instruments[$market] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert, $additionalFields);
 		}
 		return $this->instruments[$market];
 	}
@@ -198,7 +236,7 @@ class COT {
 		return array_search($fieldName, self::$fieldNames);
 	}
 
-	public function parseFile(string $filename) {
+	public function importFromFile(string $filename) {
 		$firstLine = true;
 		$fp = fopen($filename, self::READ_ONLY);
 		while ($line = fgetcsv($fp)) {
@@ -221,4 +259,7 @@ $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $cot = new COT($pdo);
 $filename = $cot->copyMissingFile();
-$cot->parseFile($filename);
+$cot->importFromFile($filename);
+foreach ($cot->counter as $table => $counts) {
+	printf("%d new rows from %d totaly readed were imported into table %s.\n", $counts['insert'], $counts['select'], $table);
+}

@@ -27,8 +27,8 @@ INSERT INTO instrument (code, name, exchange_id, contract_volume) VALUES ('CC', 
 	('ZL', 'CORN', 2, '5,000 BUSHELS');
 
 CREATE TABLE cot (
-	date DATE NOT NULL,
 	instrument_id INTEGER NOT NULL,
+	date DATE NOT NULL,
 	hedgers_long INTEGER NOT NULL CHECK (hedgers_long >= 0),
 	hedgers_short INTEGER NOT NULL CHECK (hedgers_short <= 0),
 	swap_long INTEGER NOT NULL CHECK (swap_long >= 0),
@@ -37,7 +37,7 @@ CREATE TABLE cot (
 	managed_short INTEGER NOT NULL CHECK (managed_short <= 0),
 	other_long INTEGER NOT NULL CHECK (other_long >= 0),
 	other_short INTEGER NOT NULL CHECK (other_short <= 0),
-	PRIMARY KEY (date, instrument_id)
+	PRIMARY KEY (instrument_id, date)
 );
 
 INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, managed_long, managed_short, other_long, other_short) VALUES
