@@ -4,7 +4,7 @@ const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 
 class COT {
 	const READ_ONLY = 'r';
-	const URL = 'http://www.cftc.gov/files/dea/history/com_disagg_txt_2018.zip';
+	const URL = 'http://www.cftc.gov/files/dea/history/com_disagg_txt_2019.zip';
 	const ZIP = '/tmp/cot.zip';
 
 	public $counter = [
@@ -16,22 +16,22 @@ class COT {
 	private static $fieldNames = [
 		"Market_and_Exchange_Names",
 		"As_of_Date_In_Form_YYMMDD",
-		"Report_Date_as_YYYY-MM-DD",
+		'date' => "Report_Date_as_YYYY-MM-DD",
 		"CFTC_Contract_Market_Code",
 		"CFTC_Market_Code",
 		"CFTC_Region_Code",
 		"CFTC_Commodity_Code",
 		"Open_Interest_All",
-		"Prod_Merc_Positions_Long_All",
-		"Prod_Merc_Positions_Short_All",
-		"Swap_Positions_Long_All",
-		"Swap__Positions_Short_All",
+		'hedgersLong' => "Prod_Merc_Positions_Long_All",
+		'hedgersShort' => "Prod_Merc_Positions_Short_All",
+		'swapLong' => "Swap_Positions_Long_All",
+		'swapShort' => "Swap__Positions_Short_All",
 		"Swap__Positions_Spread_All",
-		"M_Money_Positions_Long_All",
-		"M_Money_Positions_Short_All",
+		'managedLong' => "M_Money_Positions_Long_All",
+		'managedShort' => "M_Money_Positions_Short_All",
 		"M_Money_Positions_Spread_All",
-		"Other_Rept_Positions_Long_All",
-		"Other_Rept_Positions_Short_All",
+		'otherLong' => "Other_Rept_Positions_Long_All",
+		'otherShort' => "Other_Rept_Positions_Short_All",
 		"Other_Rept_Positions_Spread_All",
 		"Tot_Rept_Positions_Long_All",
 		"Tot_Rept_Positions_Short_All",
@@ -217,23 +217,19 @@ class COT {
 		if (!file_exists($filename)) {
 			copy($url, $filename);
 		}
-		return 'zip://' . $filename . '#annualof.txt';
+		return 'zip://' . $filename . '#c_year.txt';
 	}
 
-	public function checkFields(array $fields) {
+	public static function checkFields(array $fields) {
 		$unknownFieldNames = array_diff($fields, self::$fieldNames);
 		if (!empty($unknownFieldNames)) {
-			print_r($unknownFieldNames);
-			throw new \Exception('Unknown field names!');
+			$e = new \Exception('Unknown field names!');
+			$e->data = $unknownFieldNames;
+			throw $e;
 		}
 	}
 
-	public static function filterColumns(array $line, array $filterFieldNames) {
-		$fieldNames = array_intersect(self::$fieldNames, $filterFieldNames);
-		var_dump($fieldNames);
-	}
-
-	private function selectOrInsertReturnsId(string $counterKey, string $select, array $params, string $insert, array $additionalFields = []) {
+	private function selectOrInsertReturnsId(string $counterKey, array $params, string $select, string $insert, array $additionalFields = []) {
 		++$this->counter[$counterKey]['select'];
 		$statement = $this->pdo->prepare($select);
 		$success = $statement->execute($params);
@@ -252,10 +248,10 @@ class COT {
 	public function getExchangeId(string $exchange) {
 		if (!array_key_exists($exchange, $this->exchanges)) {
 			$counterKey = 'exchange';
-			$select = "SELECT id FROM exchange WHERE name = :exchange";
 			$params = ['exchange' => $exchange];
+			$select = "SELECT id FROM exchange WHERE name = :exchange";
 			$insert = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
-			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert);
+			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($counterKey, $params, $select, $insert);
 		}
 		return $this->exchanges[$exchange];
 	}
@@ -263,11 +259,11 @@ class COT {
 	public function getInstrumentId(int $exchangeId, string $market, ?string $contractVolume) {
 		if (!array_key_exists($market, $this->instruments)) {
 			$counterKey = 'instrument';
-			$select = "SELECT id, exchange_id, contract_volume FROM instrument WHERE name = :instrument";
 			$params = ['instrument' => $market];
+			$select = "SELECT id, exchange_id, contract_volume FROM instrument WHERE name = :instrument";
 			$insert = "INSERT INTO instrument (exchange_id, name, contract_volume) VALUES (:exchangeId, :instrument, :contractVolume) RETURNING id";
 			$additionalFields = ['exchangeId' => $exchangeId, 'contractVolume' => $contractVolume];
-			$this->instruments[$market] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert, $additionalFields);
+			$this->instruments[$market] = $this->selectOrInsertReturnsId($counterKey, $params, $select, $insert, $additionalFields);
 		}
 		return $this->instruments[$market];
 	}
@@ -275,8 +271,8 @@ class COT {
 	public function processCot(int $instrumentId, string $date, int $hedgersLong, int $hedgersShort, int $swapLong, int $swapShort, int $managedLong, int $managedShort, int $otherLong, int $otherShort) {
 		if (!isset($this->cot[$instrumentId][$date])) {
 			$counterKey = 'cot';
-			$select = "SELECT instrument_id, date FROM cot WHERE instrument_id = :instrumentId AND date = :date";
 			$params = ['instrumentId' => $instrumentId, 'date' => $date];
+			$select = "SELECT instrument_id, date FROM cot WHERE instrument_id = :instrumentId AND date = :date";
 			$insert = "INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, managed_long, managed_short, other_long, other_short)
 				VALUES (:instrumentId, :date, :hedgersLong, :hedgersShort, :swapLong, :swapShort, :managedLong, :managedShort, :otherLong, :otherShort) RETURNING instrument_id, date";
 			$additionalFields = [
@@ -289,13 +285,40 @@ class COT {
 				'otherLong' => $otherLong,
 				'otherShort' => $otherShort,
 			];
-			$this->instruments[$market] = $this->selectOrInsertReturnsId($counterKey, $select, $params, $insert, $additionalFields);
+			$this->cot[$instrumentId][$date] = $this->selectOrInsertReturnsId($counterKey, $params, $select, $insert, $additionalFields);
 		}
-		return $this->instruments[$market];
+		return $this->cot[$instrumentId][$date];
 	}
 
 	public static function indexOfFieldName(string $fieldName) {
-		return array_search($fieldName, self::$fieldNames);
+		$index = array_search($fieldName, array_values(self::$fieldNames));
+		if ($index === false) {
+			throw new \Exception('Unknown field name!');
+		}
+		return $index;
+	}
+
+	private static function getDate(array $line) {
+		$date = self::getFieldByKey($line, 'date');
+		$otherDate = $line[self::indexOfFieldName('As_of_Date_In_Form_YYMMDD')];
+		if (substr($otherDate, 0, 2) !== substr($date, 2, 2)
+			|| substr($otherDate, 2, 2) !== substr($date, 5, 2)
+			|| substr($otherDate, 4) !== substr($date, 8)
+		) {
+			throw new \Exception("Dates doesn't match each other!");
+		}
+		return $date;
+	}
+
+	public static function getFieldByKey(array $line, $fieldKey) {
+		if (!array_key_exists($fieldKey, self::$fieldNames)) {
+			throw new \Exception('Unknown field key!');
+		}
+		return self::getField($line, self::$fieldNames[$fieldKey]);
+	}
+
+	public static function getField(array $line, $fieldName) {
+		return $line[self::indexOfFieldName($fieldName)];
 	}
 
 	public function importFromFile(string $filename) {
@@ -303,19 +326,26 @@ class COT {
 		$fp = fopen($filename, self::READ_ONLY);
 		while ($line = fgetcsv($fp)) {
 			if ($firstLine) {
-				$this->checkFields($line);
+				self::checkFields($line);
 				$firstLine = false;
 			} else {
-				$fieldIndex = $this->indexOfFieldName('Market and Exchange Names');
-				[$market, $exchange] = preg_split('~ - (?!.* - )~', $line[$fieldIndex]);
+				$marketExchangeFieldIndex = self::indexOfFieldName('Market_and_Exchange_Names');
+				[$market, $exchange] = preg_split('~ - (?!.* - )~', $line[$marketExchangeFieldIndex]);
 				$exchangeId = $this->getExchangeId($exchange);
-				$instrumentId = $this->getInstrumentId($exchangeId, $market, $line[$this->indexOfFieldName('Contract Units')]);
-				$cotFields = [
-					'Commercial Positions-Long (All)',
-					'Commercial Positions-Short (All)',
-
-				];
-				$this->filterColumns($line, )
+				$contractUnits = $line[self::indexOfFieldName('Contract_Units')];
+				$instrumentId = $this->getInstrumentId($exchangeId, $market, $contractUnits);
+				$date = self::getDate($line);
+				$this->processCot($instrumentId,
+					$date,
+					self::getFieldByKey($line, 'hedgersLong'),
+					self::getFieldByKey($line, 'hedgersShort'),
+					self::getFieldByKey($line, 'swapLong'),
+					self::getFieldByKey($line, 'swapShort'),
+					self::getFieldByKey($line, 'managedLong'),
+					self::getFieldByKey($line, 'managedShort'),
+					self::getFieldByKey($line, 'otherLong'),
+					self::getFieldByKey($line, 'otherShort')
+				);
 			}
 		}
 	}
