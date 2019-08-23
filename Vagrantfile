@@ -10,7 +10,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 	# please see the online documentation at vagrantup.com.
 
 	# Every Vagrant virtual environment requires a box to build off of.
-	config.vm.box = "debian/jessie64"
+	config.vm.box = "generic/debian10"
 
 	# If true, then any SSH connections made will enable agent forwarding.
 	# Default value: false
