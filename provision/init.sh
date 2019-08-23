@@ -1,12 +1,7 @@
 apt-get install -y apt-transport-https lsb-release ca-certificates
 
-if [ ! -e /etc/apt/sources.list.d/sury.php.list ]; then
-	wget -O /etc/apt/trusted.gpg.d/sury.php.gpg https://packages.sury.org/php/apt.gpg
-	echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/sury.php.list
-fi
-
 apt-get update
-apt-get install -y curl git nginx php7.1-fpm php7.1-zip unzip zip
+apt-get install -y curl git nginx php7.3-fpm php7.3-zip unzip zip
 
 if [ ! -e /usr/local/bin/composer ]; then
 	php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
