@@ -26,17 +26,17 @@ class COT {
 		'hedgersShort' => "Prod_Merc_Positions_Short_All",
 		'swapLong' => "Swap_Positions_Long_All",
 		'swapShort' => "Swap__Positions_Short_All",
-		"Swap__Positions_Spread_All",
+		'swapSpread' => "Swap__Positions_Spread_All",
 		'managedLong' => "M_Money_Positions_Long_All",
 		'managedShort' => "M_Money_Positions_Short_All",
-		"M_Money_Positions_Spread_All",
+		'managedSpread' => "M_Money_Positions_Spread_All",
 		'otherLong' => "Other_Rept_Positions_Long_All",
 		'otherShort' => "Other_Rept_Positions_Short_All",
-		"Other_Rept_Positions_Spread_All",
+		'otherSpread' => "Other_Rept_Positions_Spread_All",
 		"Tot_Rept_Positions_Long_All",
 		"Tot_Rept_Positions_Short_All",
-		"NonRept_Positions_Long_All",
-		"NonRept_Positions_Short_All",
+		'nonReportableLong' => "NonRept_Positions_Long_All",
+		'nonReportableShort' => "NonRept_Positions_Short_All",
 		"Open_Interest_Old",
 		"Prod_Merc_Positions_Long_Old",
 		"Prod_Merc_Positions_Short_Old",
@@ -206,6 +206,7 @@ class COT {
 		"CFTC_SubGroup_Code",
 		"FutOnly_or_Combined",
 	];
+	private static $decoratedFields = [];
 	private $instruments = [];
 	private $pdo;
 
@@ -227,6 +228,29 @@ class COT {
 			$e->data = $unknownFieldNames;
 			throw $e;
 		}
+	}
+
+	public static function decorateArray(array $list) {
+		$result = [];
+		foreach ($list as $key => $value) {
+			if (is_string($key)) {
+				$result[$key] = $value;
+			} else {
+				$result[$value] = $value;
+			}
+		}
+		return $result;
+	}
+
+	public static function getFieldKeys() {
+		if (empty(self::$decoratedFields)) {
+			self::$decoratedFields = self::decorateArray(self::$fieldNames);
+		}
+		return array_keys(self::$decoratedFields);
+	}
+
+	public static function getFields(array $line) {
+		return array_combine(self::getFieldKeys(), $line);
 	}
 
 	private function selectOrInsertReturnsId(string $counterKey, array $params, string $select, string $insert, array $additionalFields = []) {
@@ -268,23 +292,30 @@ class COT {
 		return $this->instruments[$market];
 	}
 
-	public function processCot(int $instrumentId, string $date, int $hedgersLong, int $hedgersShort, int $swapLong, int $swapShort, int $managedLong, int $managedShort, int $otherLong, int $otherShort) {
+	private static function filterFields(array $fields, array $filter) {
+		$result = [];
+		foreach (self::decorateArray($filter) as $key => $value) {
+			$result[$key] = is_callable($value) ? $value($fields[$key]) : $fields[$key];
+		}
+		return $result;
+	}
+
+	public function processCot(int $instrumentId, string $date, array $fields) {
 		if (!isset($this->cot[$instrumentId][$date])) {
 			$counterKey = 'cot';
 			$params = ['instrumentId' => $instrumentId, 'date' => $date];
 			$select = "SELECT instrument_id, date FROM cot WHERE instrument_id = :instrumentId AND date = :date";
-			$insert = "INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, managed_long, managed_short, other_long, other_short)
-				VALUES (:instrumentId, :date, :hedgersLong, :hedgersShort, :swapLong, :swapShort, :managedLong, :managedShort, :otherLong, :otherShort) RETURNING instrument_id, date";
-			$additionalFields = [
-				'hedgersLong' => $hedgersLong,
-				'hedgersShort' => $hedgersShort,
-				'swapLong' => $swapLong,
-				'swapShort' => $swapShort,
-				'managedLong' => $managedLong,
-				'managedShort' => $managedShort,
-				'otherLong' => $otherLong,
-				'otherShort' => $otherShort,
-			];
+			$insert = "INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, swap_spread, managed_long, managed_short, managed_spread, other_long, other_short, other_spread, nonreportable_long, nonreportable_short)
+				VALUES (:instrumentId, :date, :hedgersLong, :hedgersShort, :swapLong, :swapShort, :swapSpread, :managedLong, :managedShort, :managedSpread, :otherLong, :otherShort, :otherSpread, :nonReportableLong, :nonReportableShort) RETURNING instrument_id, date";
+			$negate = function($value) {
+				return -$value;
+			};
+			$additionalFields = self::filterFields($fields, ['hedgersLong', 'hedgersShort' => $negate,
+				'swapLong', 'swapShort' => $negate, 'swapSpread',
+				'managedLong', 'managedShort' => $negate, 'managedSpread',
+				'otherLong', 'otherShort' => $negate, 'otherSpread',
+				'nonReportableLong', 'nonReportableShort' => $negate,
+			]);
 			$this->cot[$instrumentId][$date] = $this->selectOrInsertReturnsId($counterKey, $params, $select, $insert, $additionalFields);
 		}
 		return $this->cot[$instrumentId][$date];
@@ -329,23 +360,13 @@ class COT {
 				self::checkFields($line);
 				$firstLine = false;
 			} else {
-				$marketExchangeFieldIndex = self::indexOfFieldName('Market_and_Exchange_Names');
-				[$market, $exchange] = preg_split('~ - (?!.* - )~', $line[$marketExchangeFieldIndex]);
+				$fields = self::getFields($line);
+				[$market, $exchange] = preg_split('~ - (?!.* - )~', $fields['Market_and_Exchange_Names']);
 				$exchangeId = $this->getExchangeId($exchange);
 				$contractUnits = $line[self::indexOfFieldName('Contract_Units')];
 				$instrumentId = $this->getInstrumentId($exchangeId, $market, $contractUnits);
 				$date = self::getDate($line);
-				$this->processCot($instrumentId,
-					$date,
-					self::getFieldByKey($line, 'hedgersLong'),
-					self::getFieldByKey($line, 'hedgersShort'),
-					self::getFieldByKey($line, 'swapLong'),
-					self::getFieldByKey($line, 'swapShort'),
-					self::getFieldByKey($line, 'managedLong'),
-					self::getFieldByKey($line, 'managedShort'),
-					self::getFieldByKey($line, 'otherLong'),
-					self::getFieldByKey($line, 'otherShort')
-				);
+				$this->processCot($instrumentId, $date, $fields);
 			}
 		}
 	}
@@ -359,5 +380,5 @@ $cot = new COT($pdo);
 $filename = $cot->copyMissingFile();
 $cot->importFromFile($filename);
 foreach ($cot->counter as $table => $counts) {
-	printf("%d new rows from %d totaly readed were imported into table %s.\n", $counts['insert'], $counts['select'], $table);
+	printf("Table '%s': %d rows readed, %d rows added.\n", $table, $counts['select'], $counts['insert']);
 }
