@@ -15,7 +15,8 @@ class COT {
 	private static $fields = [
 		"Market_and_Exchange_Names",
 		"As_of_Date_In_Form_YYMMDD",
-		'date' => "Report_Date_as_YYYY-MM-DD",
+		'date' => "Report_Date_as_YYYY-MM-DD", // method checkFields can modify this value to "Report_Date_as_MM_DD_YYYY"
+			// "Report_Date_as_MM_DD_YYYY" is used until 2012
 		"CFTC_Contract_Market_Code",
 		"CFTC_Market_Code",
 		"CFTC_Region_Code",
@@ -220,19 +221,27 @@ class COT {
 		return sprintf(self::URL, $year);
 	}
 
-	public static function extractMissingFile(?string $filename = null, ?string $url = null) {
+	public static function downloadFileIfMissing(?string $filename = null, ?string $url = null) {
 		$url = $url ?: self::getUrl();
 		$filename = $filename ?: tempnam(sys_get_temp_dir(), 'cot-') . '.zip';
 		if (!file_exists($filename)) {
 			copy($url, $filename);
 		}
+		return $filename;
+	}
+
+	public static function extractFile($filename) {
 		return 'zip://' . $filename . '#c_year.txt';
 	}
 
 	public static function checkFields(array $fields) {
+		if (in_array("Report_Date_as_MM_DD_YYYY", $fields)) {
+			self::$fields['date'] = "Report_Date_as_MM_DD_YYYY";
+		}
 		$unknownFieldNames = array_diff($fields, self::$fields);
 		if (!empty($unknownFieldNames)) {
-			$e = new \Exception('Unknown field names!');
+			$msg = sprintf('Unknown field names! [%s]', implode(', ', $unknownFieldNames));
+			$e = new \Exception($msg);
 			$e->data = $unknownFieldNames;
 			throw $e;
 		}
@@ -330,9 +339,16 @@ class COT {
 	private static function getDate(array $fields) {
 		if (substr($fields['As_of_Date_In_Form_YYMMDD'], 0, 2) !== substr($fields['date'], 2, 2)
 			|| substr($fields['As_of_Date_In_Form_YYMMDD'], 2, 2) !== substr($fields['date'], 5, 2)
-			|| substr($fields['As_of_Date_In_Form_YYMMDD'], 4) !== substr($fields['date'], 8)
+			|| substr($fields['As_of_Date_In_Form_YYMMDD'], 4, 2) !== substr($fields['date'], 8, 2)
 		) {
-			throw new \Exception("Dates doesn't match each other!");
+			$data = [
+				'Report_Date_as_YYYY-MM-DD' => $fields['date'],
+				'As_of_Date_In_Form_YYMMDD' => $fields['As_of_Date_In_Form_YYMMDD'],
+			];
+			$msg = vsprintf("Dates doesn't match each other! '%s' and '%s'", $data);
+			$e = new \Exception($msg);
+			$e->data = $data;
+			throw $e;
 		}
 		return $fields['date'];
 	}
