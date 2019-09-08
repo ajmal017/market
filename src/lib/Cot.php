@@ -1,8 +1,9 @@
 <?php
 
 declare(strict_types=1);
+namespace Sharkodlak\Market;
 
-class COT {
+class Cot {
 	const READ_ONLY = 'r';
 	const URL = 'http://www.cftc.gov/files/dea/history/com_disagg_txt_%d.zip';
 
@@ -18,7 +19,7 @@ class COT {
 		'date' => "Report_Date_as_YYYY-MM-DD", // method checkFields can modify this value to "Report_Date_as_MM_DD_YYYY"
 			// "Report_Date_as_MM_DD_YYYY" is used until 2012
 		"CFTC_Contract_Market_Code",
-		"CFTC_Market_Code",
+		'exchangeCode' => "CFTC_Market_Code",
 		"CFTC_Region_Code",
 		"CFTC_Commodity_Code",
 		"Open_Interest_All",
@@ -208,20 +209,20 @@ class COT {
 	];
 	private static $fieldsTranslation = [];
 	private $instruments = [];
-	private $pdo;
+	private $dbAdapter;
 
-	public function __construct(\PDO $pdo) {
-		$this->pdo = $pdo;
+	public function __construct(\Sharkodlak\Db\Adapter\Base $dbAdapter) {
+		$this->dbAdapter = $dbAdapter;
 	}
 
-	public static function getUrl(?int $year = null) {
+	public static function getUrl(?int $year = null): string {
 		if (!isset($year)) {
 			$year = idate('Y');
 		}
 		return sprintf(self::URL, $year);
 	}
 
-	public static function downloadFileIfMissing(?string $filename = null, ?string $url = null) {
+	public static function downloadFileIfMissing(?string $filename = null, ?string $url = null): string {
 		$url = $url ?: self::getUrl();
 		$filename = $filename ?: tempnam(sys_get_temp_dir(), 'cot-') . '.zip';
 		if (!file_exists($filename)) {
@@ -230,7 +231,7 @@ class COT {
 		return $filename;
 	}
 
-	public static function extractFile($filename) {
+	public static function extractFile($filename): string {
 		return 'zip://' . $filename . '#c_year.txt';
 	}
 
@@ -247,7 +248,7 @@ class COT {
 		}
 	}
 
-	public static function arrayChangeKeysToStrings(array $list) {
+	public static function arrayChangeKeysToStrings(array $list): array {
 		$result = [];
 		foreach ($list as $key => $value) {
 			$result[is_string($key) ? $key : $value] = $value;
@@ -255,26 +256,26 @@ class COT {
 		return $result;
 	}
 
-	public static function getFieldKeys() {
+	public static function getFieldKeys(): array {
 		if (empty(self::$fieldsTranslation)) {
 			self::$fieldsTranslation = self::arrayChangeKeysToStrings(self::$fields);
 		}
 		return array_keys(self::$fieldsTranslation);
 	}
 
-	public static function getNamedFields(array $line) {
+	public static function getNamedFields(array $line): array {
 		return array_combine(self::getFieldKeys(), $line);
 	}
 
 	private function selectOrInsertReturnsId(string $counterName, array $params, string $select, string $insert,
 		array $additionalFields = []
-	) {
+	): int {
 		++$this->counter[$counterName]['select'];
-		$statement = $this->pdo->prepare($select);
+		$statement = $this->dbAdapter->pdo->prepare($select);
 		$success = $statement->execute($params);
 		$id = $statement->fetchColumn();
 		if ($id === false) {
-			$statement = $this->pdo->prepare($insert);
+			$statement = $this->dbAdapter->pdo->prepare($insert);
 			$success = $statement->execute($params + $additionalFields);
 			if ($success) {
 				++$this->counter[$counterName]['insert'];
@@ -284,18 +285,20 @@ class COT {
 		return $id;
 	}
 
-	public function getExchangeId(string $exchange) {
+	public function getExchangeId(string $exchange, string $exchangeCode): int {
 		if (!array_key_exists($exchange, $this->exchanges)) {
-			$counterName = 'exchange';
-			$params = ['exchange' => $exchange];
-			$select = "SELECT id FROM exchange WHERE name = :exchange";
-			$insert = "INSERT INTO exchange (name) VALUES (:exchange) RETURNING id";
-			$this->exchanges[$exchange] = $this->selectOrInsertReturnsId($counterName, $params, $select, $insert);
+			$exchangeFields = ['name' => $exchange];
+			list('id' => $this->exchanges[$exchange]) = $this->dbAdapter->insertOrSelect('exchange', $exchangeFields, ['id'], ['name']);
+			$exchangeCodeFields = [
+				'exchange_id' => $this->exchanges[$exchange],
+				'code' => $exchangeCode
+			];
+			$this->dbAdapter->insertIgnore('exchange_code', $exchangeCodeFields, ['exchange_id']);
 		}
 		return $this->exchanges[$exchange];
 	}
 
-	public function getInstrumentId(int $exchangeId, string $instrument, ?string $contractVolume) {
+	public function getInstrumentId(int $exchangeId, string $instrument, ?string $contractVolume): int {
 		if (!array_key_exists($instrument, $this->instruments)) {
 			$counterName = 'instrument';
 			$params = ['instrument' => $instrument];
@@ -307,7 +310,7 @@ class COT {
 		return $this->instruments[$instrument];
 	}
 
-	private static function filterAndMapFields(array $fields, array $filterAndMap) {
+	private static function filterAndMapFields(array $fields, array $filterAndMap): array {
 		$result = [];
 		foreach (self::arrayChangeKeysToStrings($filterAndMap) as $filtered => $map) {
 			$result[$filtered] = is_callable($map) ? call_user_func($map, $fields[$filtered]) : $fields[$filtered];
@@ -315,7 +318,7 @@ class COT {
 		return $result;
 	}
 
-	public function processCot(int $instrumentId, string $date, array $fields) {
+	public function processCot(int $instrumentId, string $date, array $fields): int {
 		if (!isset($this->cot[$instrumentId][$date])) {
 			$counterName = 'cot';
 			$params = ['instrumentId' => $instrumentId, 'date' => $date];
@@ -336,7 +339,7 @@ class COT {
 		return $this->cot[$instrumentId][$date];
 	}
 
-	private static function getDate(array $fields) {
+	private static function getDate(array $fields): string {
 		if (substr($fields['As_of_Date_In_Form_YYMMDD'], 0, 2) !== substr($fields['date'], 2, 2)
 			|| substr($fields['As_of_Date_In_Form_YYMMDD'], 2, 2) !== substr($fields['date'], 5, 2)
 			|| substr($fields['As_of_Date_In_Form_YYMMDD'], 4, 2) !== substr($fields['date'], 8, 2)
@@ -357,13 +360,14 @@ class COT {
 		$firstLine = true;
 		$fp = fopen($filename, self::READ_ONLY);
 		while ($line = fgetcsv($fp)) {
+			$line = array_map('\\trim', $line); // Trim each line cell
 			if ($firstLine) {
 				self::checkFields($line);
 				$firstLine = false;
 			} else {
 				$fields = self::getNamedFields($line);
 				[$market, $exchange] = preg_split('~ - (?!.* - )~', $fields['Market_and_Exchange_Names']);
-				$exchangeId = $this->getExchangeId($exchange);
+				$exchangeId = $this->getExchangeId($exchange, $fields['exchangeCode']);
 				$instrumentId = $this->getInstrumentId($exchangeId, $market, $fields['Contract_Units']);
 				$date = self::getDate($fields);
 				$this->processCot($instrumentId, $date, $fields);

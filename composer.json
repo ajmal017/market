@@ -14,14 +14,14 @@
 		}
 	],
 	"require": {
-		"sharkodlak/exception": "*",
-		"php": ">=5.6.13"
+		"sharkodlak/db": "*",
+		"php": "~7.3.4",
+		"ext-pgsql": "*"
 	},
 	"require-dev": {
 		"sharkodlak/development": "*"
 	},
 	"suggest": {
-		"ext-pgsql": "PostgreSQL module."
 	},
 	"support": {
 		"issues": "https://github.com/sharkodlak/market/issues",
@@ -29,7 +29,7 @@
 	},
 	"autoload": {
 		"psr-4": {
-			"Sharkodlak\\Market\\": "src/"
+			"Sharkodlak\\Market\\": "src/lib/"
 		}
 	},
 	"autoload-dev": {
