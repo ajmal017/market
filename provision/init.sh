@@ -18,3 +18,5 @@ fi
 cd /vagrant && sudo -u vagrant composer install
 
 . /vagrant/vendor/sharkodlak/development/init.sh
+
+cp /vagrant/provision/.private/quandl.api.key /etc/webconf/
