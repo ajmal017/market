@@ -1,0 +1,2 @@
+ALTER TABLE cot
+	ADD COLUMN open_interest INTEGER;

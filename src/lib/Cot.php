@@ -22,22 +22,22 @@ class Cot {
 		'exchangeCode' => "CFTC_Market_Code",
 		"CFTC_Region_Code",
 		"CFTC_Commodity_Code",
-		"Open_Interest_All",
-		'hedgersLong' => "Prod_Merc_Positions_Long_All",
-		'hedgersShort' => "Prod_Merc_Positions_Short_All",
-		'swapLong' => "Swap_Positions_Long_All",
-		'swapShort' => "Swap__Positions_Short_All",
-		'swapSpread' => "Swap__Positions_Spread_All",
-		'managedLong' => "M_Money_Positions_Long_All",
-		'managedShort' => "M_Money_Positions_Short_All",
-		'managedSpread' => "M_Money_Positions_Spread_All",
-		'otherLong' => "Other_Rept_Positions_Long_All",
-		'otherShort' => "Other_Rept_Positions_Short_All",
-		'otherSpread' => "Other_Rept_Positions_Spread_All",
+		'open_interest' => "Open_Interest_All",
+		'hedgers_long' => "Prod_Merc_Positions_Long_All",
+		'hedgers_short' => "Prod_Merc_Positions_Short_All",
+		'swap_long' => "Swap_Positions_Long_All",
+		'swap_short' => "Swap__Positions_Short_All",
+		'swap_spread' => "Swap__Positions_Spread_All",
+		'managed_long' => "M_Money_Positions_Long_All",
+		'managed_short' => "M_Money_Positions_Short_All",
+		'managed_spread' => "M_Money_Positions_Spread_All",
+		'other_long' => "Other_Rept_Positions_Long_All",
+		'other_short' => "Other_Rept_Positions_Short_All",
+		'other_spread' => "Other_Rept_Positions_Spread_All",
 		"Tot_Rept_Positions_Long_All",
 		"Tot_Rept_Positions_Short_All",
-		'nonReportableLong' => "NonRept_Positions_Long_All",
-		'nonReportableShort' => "NonRept_Positions_Short_All",
+		'nonreportable_long' => "NonRept_Positions_Long_All",
+		'nonreportable_short' => "NonRept_Positions_Short_All",
 		"Open_Interest_Old",
 		"Prod_Merc_Positions_Long_Old",
 		"Prod_Merc_Positions_Short_Old",
@@ -288,7 +288,7 @@ class Cot {
 	public function getExchangeId(string $exchange, string $exchangeCode): int {
 		if (!array_key_exists($exchange, $this->exchanges)) {
 			$exchangeFields = ['name' => $exchange];
-			list('id' => $this->exchanges[$exchange]) = $this->dbAdapter->insertOrSelect('exchange', $exchangeFields, ['id'], ['name']);
+			['id' => $this->exchanges[$exchange]] = $this->dbAdapter->insertOrSelect('exchange', $exchangeFields, ['id'], ['name']);
 			$exchangeCodeFields = [
 				'exchange_id' => $this->exchanges[$exchange],
 				'code' => $exchangeCode
@@ -300,12 +300,12 @@ class Cot {
 
 	public function getInstrumentId(int $exchangeId, string $instrument, ?string $contractVolume): int {
 		if (!array_key_exists($instrument, $this->instruments)) {
-			$counterName = 'instrument';
-			$params = ['instrument' => $instrument];
-			$select = "SELECT id, exchange_id, contract_volume FROM instrument WHERE name = :instrument";
-			$insert = "INSERT INTO instrument (exchange_id, name, contract_volume) VALUES (:exchangeId, :instrument, :contractVolume) RETURNING id";
-			$additionalFields = ['exchangeId' => $exchangeId, 'contractVolume' => $contractVolume];
-			$this->instruments[$instrument] = $this->selectOrInsertReturnsId($counterName, $params, $select, $insert, $additionalFields);
+			$fields = [
+				'exchange_id' => $exchangeId,
+				'name' => $instrument,
+				'contract_volume' => $contractVolume,
+			];
+			['id' => $this->instruments[$instrument]] = $this->dbAdapter->insertOrSelect('instrument', $fields, ['id'], ['name']);
 		}
 		return $this->instruments[$instrument];
 	}
@@ -318,23 +318,23 @@ class Cot {
 		return $result;
 	}
 
-	public function processCot(int $instrumentId, string $date, array $fields): int {
+	public function processCot(int $instrumentId, string $date, array $fields): ?int {
 		if (!isset($this->cot[$instrumentId][$date])) {
-			$counterName = 'cot';
-			$params = ['instrumentId' => $instrumentId, 'date' => $date];
-			$select = "SELECT instrument_id, date FROM cot WHERE instrument_id = :instrumentId AND date = :date";
-			$insert = "INSERT INTO cot (instrument_id, date, hedgers_long, hedgers_short, swap_long, swap_short, swap_spread, managed_long, managed_short, managed_spread, other_long, other_short, other_spread, nonreportable_long, nonreportable_short)
-				VALUES (:instrumentId, :date, :hedgersLong, :hedgersShort, :swapLong, :swapShort, :swapSpread, :managedLong, :managedShort, :managedSpread, :otherLong, :otherShort, :otherSpread, :nonReportableLong, :nonReportableShort) RETURNING instrument_id, date";
-			$negate = function($value) {
+			$negate = static function($value) {
 				return -$value;
 			};
-			$additionalFields = self::filterAndMapFields($fields, ['hedgersLong', 'hedgersShort' => $negate,
-				'swapLong', 'swapShort' => $negate, 'swapSpread',
-				'managedLong', 'managedShort' => $negate, 'managedSpread',
-				'otherLong', 'otherShort' => $negate, 'otherSpread',
-				'nonReportableLong', 'nonReportableShort' => $negate,
-			]);
-			$this->cot[$instrumentId][$date] = $this->selectOrInsertReturnsId($counterName, $params, $select, $insert, $additionalFields);
+			$where = ['instrument_id' => $instrumentId, 'date' => $date];
+			$fields = $where + self::filterAndMapFields($fields,
+				[
+					'hedgers_long', 'hedgers_short' => $negate,
+					'swap_long', 'swap_short' => $negate, 'swap_spread',
+					'managed_long', 'managed_short' => $negate, 'managed_spread',
+					'other_long', 'other_short' => $negate, 'other_spread',
+					'nonreportable_long', 'nonreportable_short' => $negate,
+					'open_interest',
+				]
+			);
+			['open_interest' => $this->cot[$instrumentId][$date]] = $this->dbAdapter->insertOrSelect('cot', $fields, ['open_interest'], array_keys($where));
 		}
 		return $this->cot[$instrumentId][$date];
 	}
