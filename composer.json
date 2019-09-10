@@ -19,7 +19,7 @@
 		"ext-pgsql": "*"
 	},
 	"require-dev": {
-		"sharkodlak/development": "*"
+		"sharkodlak/development": "~1.0.6"
 	},
 	"suggest": {
 	},
