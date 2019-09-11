@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
-define('YEAR', isset($argv[1]) ? $argv[1] : null);
+define('YEAR', $argv[1] ?? null);
 
 $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
