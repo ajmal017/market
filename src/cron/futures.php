@@ -1,14 +1,17 @@
 <?php
 
 declare(strict_types=1);
-require_once(__DIR__ . '/../lib/Quandl/Futures.php');
+require __DIR__ . '/../../vendor/autoload.php';
 
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 
 $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+$dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo);
+$db = new \Sharkodlak\Db\Db($dbAdapter);
 $apiKey = trim(file_get_contents(QUANDL_API_KEY));
-$connector = new \Quandl\Connector($apiKey);
-$futures = new \Quandl\Futures($connector, new \Futures());
-$data = $futures->getAndStoreData($pdo, 'ICE', 'CC', 2016, 3);
+$connector = new Sharkodlak\Market\Quandl\Connector($apiKey);
+$futuresHelper = new Sharkodlak\Market\Futures();
+$futures = new Sharkodlak\Market\Quandl\Futures($connector, $futuresHelper);
+$data = $futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);

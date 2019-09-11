@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-namespace Quandl;
+namespace Sharkodlak\Market\Quandl;
 
 class Connector {
 	const URL = 'https://www.quandl.com/api/v3/datasets/%s/%s.json?api_key=%s';

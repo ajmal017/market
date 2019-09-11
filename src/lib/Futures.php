@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+namespace Sharkodlak\Market;
 
 class Futures {
 	static private $monthLetters = [1 => 'F', 'G', 'H', 'J', 'K', 'M', 'N', 'Q', 'U', 'V', 'X', 'Z'];
