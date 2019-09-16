@@ -5,7 +5,7 @@ namespace Sharkodlak\Market\Quandl;
 
 class Futures {
 	const DATABASE = 'SRF';
-	private $connector;
+	private $di;
 	private static $columnNames = [
 		'Date' => 'date',
 		'Open' => 'open',
@@ -15,19 +15,18 @@ class Futures {
 		'Volume' => 'volume',
 		'Prev. Day Open Interest' => 'previous_open_interest',
 	];
-	private $futures;
 
-	public function __construct(Connector $connector, \Sharkodlak\Market\Futures $futures) {
-		$this->connector = $connector;
-		$this->futures = $futures;
+	public function __construct(Di $di) {
+		$this->di = $di;
 	}
 
 	public function getData(string $code, int $year, int $month): array {
-		$dataset = $code . $this->futures->getMonthLetter($month) . $year;
-		return $this->connector->getData(self::DATABASE, $dataset);
+		$dataset = $code . $this->di->futures->getMonthLetter($month) . $year;
+		return $this->di->connector->getData(self::DATABASE, $dataset);
 	}
 
 	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month) {
+		$timeLap = microtime(true);
 		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
 		$columnNames = $this->translateColumnNames($data['column_names']);
 		$fields = [
@@ -38,7 +37,14 @@ class Futures {
 				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
 		];
 		['id' => $contractId] = $db->adapter->insertOrSelect('contract', $fields, ['id'], array_keys($fields));
+		$rows = count($data['data']);
 		foreach ($data['data'] as $i => $dailyData) {
+			$timeCurrent = microtime(true);
+			if ($timeCurrent - $timeLap > 1) {
+				$msg = sprintf("\x0D%02d%%", 100 * $i / $rows);
+				$this->di->logger->info($msg);
+				$timeLap = $timeCurrent;
+			}
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
 			$db->adapter->insertIgnore('trade_day', $dailyData, ['date', 'contract_id']);
