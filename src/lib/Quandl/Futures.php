@@ -25,10 +25,7 @@ class Futures {
 		return $this->di->connector->getData(self::DATABASE, $dataset);
 	}
 
-	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month) {
-		$timeLap = microtime(true);
-		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
-		$columnNames = $this->translateColumnNames($data['column_names']);
+	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): int {
 		$fields = [
 			'year' => $year,
 			'month' => $month,
@@ -37,18 +34,32 @@ class Futures {
 				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
 		];
 		['id' => $contractId] = $db->adapter->insertOrSelect('contract', $fields, ['id'], array_keys($fields));
+		return $contractId;
+	}
+
+	private function getAndStoreDataInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, int $rows, int $i, array $dailyData): float {
+		$timeCurrent = microtime(true);
+		if ($timeCurrent - $timeLap > 1) {
+			$msg = sprintf("\x0DImported %02d%%", 100 * $i / $rows);
+			$this->di->logger->info($msg);
+			$timeLap = $timeCurrent;
+		}
+		$db->adapter->insertIgnore('trade_day', $dailyData, ['date', 'contract_id']);
+		return $timeLap;
+	}
+
+	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month) {
+		$timeLap = microtime(true);
+		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
 		$rows = count($data['data']);
+		$columnNames = $this->translateColumnNames($data['column_names']);
+		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $year, $month);
 		foreach ($data['data'] as $i => $dailyData) {
-			$timeCurrent = microtime(true);
-			if ($timeCurrent - $timeLap > 1) {
-				$msg = sprintf("\x0D%02d%%", 100 * $i / $rows);
-				$this->di->logger->info($msg);
-				$timeLap = $timeCurrent;
-			}
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
-			$db->adapter->insertIgnore('trade_day', $dailyData, ['date', 'contract_id']);
+			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $rows, $i, $dailyData);
 		}
+		$this->di->logger->info("\x0DImported 100%\n");
 	}
 
 	public function translateColumnNames(array $originalColumnNames): array {
