@@ -5,7 +5,7 @@ namespace Sharkodlak\Market\Quandl;
 
 class Futures {
 	const DATABASE = 'SRF';
-	const IMPORTED_MESSAGE = "\x0DImported %02d%%. ";
+	const IMPORTED_MESSAGE = "Imported %02d%%. ";
 	private $di;
 	private static $columnNames = [
 		'Date' => 'date',
@@ -60,7 +60,7 @@ class Futures {
 			$dailyData['contract_id'] = $contractId;
 			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $rows, $i, $dailyData);
 		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE . "\n", 100));
+		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100) . "\n");
 	}
 
 	public function translateColumnNames(array $originalColumnNames): array {

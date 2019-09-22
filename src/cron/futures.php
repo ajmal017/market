@@ -32,7 +32,7 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 	public function getLogger(): \Psr\Log\LoggerInterface {
 		$logger = new class extends \Psr\Log\AbstractLogger {
 			public function log($level, $message, array $context = []) {
-				echo $message;
+				echo "\x0D$message";
 			}
 		};
 		return $logger;
