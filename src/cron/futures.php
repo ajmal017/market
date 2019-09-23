@@ -43,4 +43,5 @@ $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
 $futures = new Sharkodlak\Market\Quandl\Futures($di);
-$data = $futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);
+$futures->getAndStoreContracts($db);
+$futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);

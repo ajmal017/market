@@ -1,7 +1,7 @@
 apt-get install -y apt-transport-https lsb-release ca-certificates
 
 apt-get update
-apt-get install -y curl git nginx php7.3-fpm php-xml php-zip unzip zip
+apt-get install -y curl git nginx php7.3-fpm php-curl php-xml php-zip unzip zip
 
 if [ ! -e /usr/local/bin/composer ]; then
 	php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
