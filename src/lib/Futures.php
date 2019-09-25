@@ -13,4 +13,12 @@ class Futures {
 		}
 		return self::$monthLetters[$month];
 	}
+
+	static public function getMonthNumber(string $letter): int {
+		if (!in_array($letter, self::$monthLetters)) {
+			$msg = sprintf('Month can be from [FGHJKMNQUVXZ], %s given!', $letter);
+			throw new \InvalidArgumentException($msg);
+		}
+		return array_search($letter, self::$monthLetters);
+	}
 }

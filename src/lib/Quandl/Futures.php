@@ -32,13 +32,39 @@ class Futures {
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
-		$match = \preg_match('~^(?P<exchangeCode>[^_]+)_(?P<instrumentSymbol>.+)(?P<monthCode>[a-z])(?P<year>\d{4})$~i', $data['code'], $matches);
-		unset($matches[0], $matches[1], $matches[2], $matches[3], $matches[4]);
-		\var_dump($matches);
-		$instrumentData = [];
-		$instrumentData += $db->adapter->select('exchange_code', ['exchange_id'], ['code' => $matches['exchangeCode']]);
-		$instrument = $db->adapter->insertIgnore('instrument', $instrumentData, ['id', 'symbol']);
-		\var_dump($instrument);exit;
+		$match = \preg_match('~^(?P<exchangeCode>[^_]+)_(?P<contractCode>(?P<instrumentSymbol>.+)(?P<monthCode>[a-z])(?P<year>\d{4}))$~i', $data['code'], $data['contractCode']);
+		if (!$match) {
+			$msg = sprintf('Unknown code format "%s"!', $data['code']);
+			$this->di->logger->warning($msg);
+		}
+		$match = \preg_match('~^(?:(?P<exchangeCode>[A-Z]+) )?(?P<name>.*), (?P<month>\w+) (?P<year>\d{4}) \((?P<contractCode>[A-Z]+\d{4})\)$~', $data['name'], $data['contractName']);
+		if (!$match) {
+			$msg = sprintf('Unknown name format "%s"!', $data['name']);
+			$this->di->logger->warning($msg);
+		}
+		if (empty($data['contractName']['exchangeCode'])) {
+			$msg = sprintf('Missing exchange code in "%s"!', $data['name']);
+			$this->di->logger->notice($msg);
+		}
+		$instrumentData = [
+			'name' => $data['contractName']['name'],
+			'name_lower' => \strtolower($data['contractName']['name']),
+			'symbol' => $data['contractCode']['instrumentSymbol'],
+		];
+		$contractData = [
+			'year' => $data['contractCode']['year'],
+			'month' => $this->di->futures->getMonthNumber($data['contractCode']['monthCode']),
+			'description' => $data['description'],
+			'refreshed_at' => $data['refreshed_at'],
+			'from_date' => $data['from_date'],
+			'to_date' => $data['to_date'],
+		];
+		$exchangeCode = $data['contractName']['exchangeCode'] ?: $data['contractCode']['exchangeCode'];
+		$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
+		['id' => $contractData['instrument_id']] = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower']);
+		$uniqueCodeFieldNames = ['instrument_id', 'year', 'month'];
+		$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
+		$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 		return $timeLap;
 	}
 
@@ -48,7 +74,6 @@ class Futures {
 		$numberOfRows = count($contracts);
 		foreach($contracts as $i => $row) {
 			$timeLap = $this->getAndStoreContractsInnerLoop($db, $timeLap, $row, $i, $numberOfRows);
-			\var_dump($numberOfRows, $row);exit;
 		}
 		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100) . "\n");
 	}
@@ -66,7 +91,7 @@ class Futures {
 					SELECT exchange_id FROM exchange_code WHERE code = :exchange_code
 				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
 		];
-		['id' => $contractId] = $db->adapter->insertOrSelect('contract', $fields, ['id'], array_keys($fields));
+		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
 		return $contractId;
 	}
 
@@ -77,7 +102,7 @@ class Futures {
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
-		$db->adapter->insertIgnore('trade_day', $dailyData, ['date', 'contract_id']);
+		$db->adapter->insertIgnore(['date', 'contract_id'], 'trade_day', $dailyData);
 		return $timeLap;
 	}
 

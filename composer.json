@@ -15,9 +15,10 @@
 	],
 	"require": {
 		"psr/log": "~1.1.0",
-		"sharkodlak/db": "~1.4.0",
+		"sharkodlak/db": "~2.0.1",
 		"php": "~7.3.4",
 		"ext-curl": "*",
+		"ext-pcre": "*",
 		"ext-pgsql": "*",
 		"ext-zip": "*"
 	},

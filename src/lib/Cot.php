@@ -297,13 +297,13 @@ class Cot {
 	public function getExchangeId(string $exchange, string $exchangeCode): int {
 		if (!array_key_exists($exchange, $this->exchanges)) {
 			$exchangeFields = ['name' => $exchange];
-			['id' => $this->exchanges[$exchange]] = $this->dbAdapter->insertOrSelect('exchange', $exchangeFields, ['id'], ['name']);
+			['id' => $this->exchanges[$exchange]] = $this->dbAdapter->insertOrSelect(['id'], 'exchange', $exchangeFields, ['name']);
 			$this->updateCounter('exchange');
 			$exchangeCodeFields = [
 				'exchange_id' => $this->exchanges[$exchange],
 				'code' => $exchangeCode,
 			];
-			$this->dbAdapter->insertIgnore('exchange_code', $exchangeCodeFields, ['exchange_id']);
+			$this->dbAdapter->insertIgnore(['exchange_id'], 'exchange_code', $exchangeCodeFields);
 			$this->updateCounter('exchange_code');
 		}
 		return $this->exchanges[$exchange];
@@ -316,7 +316,7 @@ class Cot {
 				'name' => $instrument,
 				'contract_volume' => $contractVolume,
 			];
-			['id' => $this->instruments[$instrument]] = $this->dbAdapter->insertOrSelect('instrument', $fields, ['id'], ['name']);
+			['id' => $this->instruments[$instrument]] = $this->dbAdapter->insertOrSelect(['id'], 'instrument', $fields, ['name']);
 			$this->updateCounter('instrument');
 		}
 		return $this->instruments[$instrument];
@@ -346,7 +346,7 @@ class Cot {
 					'open_interest',
 				]
 			);
-			['open_interest' => $this->cot[$instrumentId][$date]] = $this->dbAdapter->insertOrSelect('cot', $fields, ['open_interest'], array_keys($where));
+			['open_interest' => $this->cot[$instrumentId][$date]] = $this->dbAdapter->insertOrSelect(['open_interest'], 'cot', $fields, array_keys($where));
 			$this->updateCounter('cot');
 		}
 		return $this->cot[$instrumentId][$date];
