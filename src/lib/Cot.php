@@ -314,9 +314,10 @@ class Cot {
 			$fields = [
 				'exchange_id' => $exchangeId,
 				'name' => $instrument,
+				'name_lower' => \strtolower($instrument),
 				'contract_volume' => $contractVolume,
 			];
-			['id' => $this->instruments[$instrument]] = $this->dbAdapter->insertOrSelect(['id'], 'instrument', $fields, ['name']);
+			['id' => $this->instruments[$instrument]] = $this->dbAdapter->upsert(['id'], 'instrument', $fields, ['contract_volume'], ['name_lower']);
 			$this->updateCounter('instrument');
 		}
 		return $this->instruments[$instrument];
@@ -379,7 +380,7 @@ class Cot {
 				$firstLine = false;
 			} else {
 				$fields = self::getNamedFields($line);
-				[$market, $exchange] = preg_split('~ - (?!.* - )~', $fields['Market_and_Exchange_Names']);
+				[$market, $exchange] = preg_split('~\s+-\s+(?!.*\s-\s)~', $fields['Market_and_Exchange_Names']);
 				$exchangeId = $this->getExchangeId($exchange, $fields['exchangeCode']);
 				$instrumentId = $this->getInstrumentId($exchangeId, $market, $fields['Contract_Units']);
 				$date = self::getDate($fields);
