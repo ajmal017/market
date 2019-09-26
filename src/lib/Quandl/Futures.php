@@ -16,6 +16,7 @@ class Futures {
 		'Volume' => 'volume',
 		'Prev. Day Open Interest' => 'previous_open_interest',
 	];
+	private $loggedContractNames = [];
 
 	public function __construct(Di $di) {
 		$this->di = $di;
@@ -37,15 +38,13 @@ class Futures {
 			$msg = sprintf('Unknown code format "%s"!', $data['code']);
 			$this->di->logger->warning($msg);
 		}
-		$match = \preg_match('~^(?:(?P<exchangeCode>[A-Z]+) )?(?P<name>.*), (?P<month>\w+) (?P<year>\d{4}) \((?P<contractCode>[A-Z]+\d{4})\)$~', $data['name'], $data['contractName']);
+		$match = \preg_match('~^(?P<instrumentName>(?:(?P<exchangeCode>[A-Z]+) )?(?P<name>.*)), (?P<month>\w+) (?P<year>\d{4}) \((?P<contractCode>[A-Z]+\d{4})\)$~', $data['name'], $data['contractName']);
 		if (!$match) {
 			$msg = sprintf('Unknown name format "%s"!', $data['name']);
 			$this->di->logger->warning($msg);
 		}
-		if (empty($data['contractName']['exchangeCode'])) {
-			$msg = sprintf('Missing exchange code in "%s"!', $data['name']);
-			$this->di->logger->notice($msg);
-		}
+		$this->checkIfExchangeCodeIsMissing($data['contractName']['exchangeCode'], $data['contractName']);
+
 		$instrumentData = [
 			'name' => $data['contractName']['name'],
 			'name_lower' => \strtolower($data['contractName']['name']),
@@ -70,6 +69,18 @@ class Futures {
 		$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 		$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 		return $timeLap;
+	}
+
+	private function checkIfExchangeCodeIsMissing(?string $exchangeCode, array $contractName): bool {
+		if (empty($exchangeCode)) {
+			if (!in_array($contractName['instrumentName'], $this->loggedContractNames)) {
+				$msg = sprintf('Missing exchange code in "%s"!', $contractName[0]);
+				$this->di->logger->notice($msg);
+				$this->loggedContractNames[] = $contractName['instrumentName'];
+			}
+			return false;
+		}
+		return true;
 	}
 
 	public function getAndStoreContracts(\Sharkodlak\Db\Db $db): void {
