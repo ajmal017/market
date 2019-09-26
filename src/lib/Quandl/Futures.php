@@ -5,7 +5,7 @@ namespace Sharkodlak\Market\Quandl;
 
 class Futures {
 	const DATABASE = 'SRF';
-	const IMPORTED_MESSAGE = "Imported %02d%%. ";
+	const IMPORTED_MESSAGE = "Imported %02d%% (%d/%d). ";
 	private $di;
 	private static $columnNames = [
 		'Date' => 'date',
@@ -28,7 +28,7 @@ class Futures {
 	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, array $data, int $i, int $numberOfRows): float {
 		$timeCurrent = microtime(true);
 		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows);
+			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * (++$i) / $numberOfRows, $i, $numberOfRows);
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
@@ -61,7 +61,11 @@ class Futures {
 		];
 		$exchangeCode = $data['contractName']['exchangeCode'] ?: $data['contractCode']['exchangeCode'];
 		$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
-		['id' => $contractData['instrument_id']] = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower']);
+		$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
+		if ($instrument === null) {
+			$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower']);
+		}
+		$contractData['instrument_id'] = $instrument['id'];
 		$uniqueCodeFieldNames = ['instrument_id', 'year', 'month'];
 		$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 		$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
@@ -75,7 +79,7 @@ class Futures {
 		foreach($contracts as $i => $row) {
 			$timeLap = $this->getAndStoreContractsInnerLoop($db, $timeLap, $row, $i, $numberOfRows);
 		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100) . "\n");
+		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}
 
 	public function getData(string $code, int $year, int $month): array {
@@ -95,10 +99,10 @@ class Futures {
 		return $contractId;
 	}
 
-	private function getAndStoreDataInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, int $rows, int $i, array $dailyData): float {
+	private function getAndStoreDataInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, int $numberOfRows, int $i, array $dailyData): float {
 		$timeCurrent = microtime(true);
 		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $rows);
+			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * (++$i) / $numberOfRows, $i, $numberOfRows);
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
@@ -109,15 +113,15 @@ class Futures {
 	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): void {
 		$timeLap = microtime(true);
 		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
-		$rows = count($data['data']);
+		$numberOfRows = count($data['data']);
 		$columnNames = $this->translateColumnNames($data['column_names']);
 		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $year, $month);
 		foreach ($data['data'] as $i => $dailyData) {
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
-			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $rows, $i, $dailyData);
+			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, $i, $dailyData);
 		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100) . "\n");
+		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}
 
 	public function translateColumnNames(array $originalColumnNames): array {
