@@ -29,7 +29,7 @@ class Futures {
 	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, array $data, int $i, int $numberOfRows): float {
 		$timeCurrent = microtime(true);
 		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * (++$i) / $numberOfRows, $i, $numberOfRows);
+			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows, $i, $numberOfRows);
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
@@ -88,7 +88,7 @@ class Futures {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		foreach($contracts as $i => $row) {
-			$timeLap = $this->getAndStoreContractsInnerLoop($db, $timeLap, $row, $i, $numberOfRows);
+			$timeLap = $this->getAndStoreContractsInnerLoop($db, $timeLap, $row, ++$i, $numberOfRows);
 		}
 		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}
@@ -113,7 +113,7 @@ class Futures {
 	private function getAndStoreDataInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, int $numberOfRows, int $i, array $dailyData): float {
 		$timeCurrent = microtime(true);
 		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * (++$i) / $numberOfRows, $i, $numberOfRows);
+			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows, $i, $numberOfRows);
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}
@@ -130,7 +130,7 @@ class Futures {
 		foreach ($data['data'] as $i => $dailyData) {
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
-			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, $i, $dailyData);
+			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
 		}
 		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}

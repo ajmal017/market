@@ -8,10 +8,10 @@ const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 
 $apiKey = trim(file_get_contents(QUANDL_API_KEY));
 $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl\Di {
-	private $apiKey;
+	private $privateApiKey;
 	private $services = [];
 	public function __construct($apiKey) {
-		$this->apiKey = $apiKey;
+		$this->privateApiKey = $apiKey;
 	}
 	public function __get($name) {
 		if (!isset($services[$name])) {
@@ -20,11 +20,14 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 		}
 		return $services[$name];
 	}
+	public function getApiKey(): string {
+		return $this->privateApiKey;
+	}
 	public function getQuery(...$args): \Sharkodlak\Db\Queries\Query {
 		return new \Sharkodlak\Db\Queries\Query(...$args);
 	}
 	public function getConnector(): \Sharkodlak\Market\Quandl\Connector {
-		return new Sharkodlak\Market\Quandl\Connector($this->apiKey);
+		return new Sharkodlak\Market\Quandl\Connector($this);
 	}
 	public function getFutures(): \Sharkodlak\Market\Futures {
 		return new Sharkodlak\Market\Futures();
@@ -55,6 +58,9 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 			}
 		};
 		return $logger;
+	}
+	public function getRootDir(): string {
+		return '/vagrant';
 	}
 };
 $pdo = new \PDO('uri:file://' . DB_CONNECT);
