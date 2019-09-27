@@ -32,18 +32,18 @@ ALTER TABLE contract
 DELETE FROM instrument WHERE symbol IN ('W', 'KW', 'HG', 'HO', 'B', 'CT', 'OJ', 'G', 'RB');
 
 INSERT INTO instrument (exchange_id, name, name_lower, symbol) VALUES
-((SELECT exchange_id FROM exchange_code WHERE code = 'CBOT'), 'Wheat-SRW', 'wheat-srw', 'W'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'KCBT'), 'Wheat-HRW', 'wheat-hrw', 'KW'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'COMEX'), 'Copper', 'copper-grade #1', 'HG'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'NYMEX'), 'Heating Oil', '#2 heating oil, ny harbor-ulsd', 'HO'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Brent Crude Oil', 'brent crude oil last day', 'B'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Cotton', 'cotton no. 2', 'CT'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Orange Juice', 'frzn concentrated orange juice', 'OJ'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'IFED'), 'Gasoil', 'gasoline crk-rbob/brent 1st', 'G'),
-((SELECT exchange_id FROM exchange_code WHERE code = 'NYMEX'), 'Gasoline', 'gasoline blendstock (rbob)', 'RB')
-ON CONFLICT (name_lower) DO UPDATE SET symbol = EXCLUDED.symbol;
+	((SELECT exchange_id FROM exchange_code WHERE code = 'CBOT'), 'Wheat-SRW', 'wheat-srw', 'W'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'KCBT'), 'Wheat-HRW', 'wheat-hrw', 'KW'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'COMEX'), 'Copper', 'copper-grade #1', 'HG'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'NYMEX'), 'Heating Oil', '#2 heating oil, ny harbor-ulsd', 'HO'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Brent Crude Oil', 'brent crude oil last day', 'B'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Cotton', 'cotton no. 2', 'CT'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'ICE'), 'Orange Juice', 'frzn concentrated orange juice', 'OJ'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'IFED'), 'Gasoil', 'gasoline crk-rbob/brent 1st', 'G'),
+	((SELECT exchange_id FROM exchange_code WHERE code = 'NYMEX'), 'Gasoline', 'gasoline blendstock (rbob)', 'RB')
+	ON CONFLICT (name_lower) DO UPDATE SET symbol = EXCLUDED.symbol;
 
-UPDATE instrument SET name_lower = lower(name) WHERE name IS NOT NULL;
+UPDATE instrument SET name_lower = lower(name) WHERE name_lower IS NULL AND name IS NOT NULL;
 
 ALTER TABLE contract
 	ADD COLUMN description TEXT,
