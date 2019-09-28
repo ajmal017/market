@@ -41,26 +41,30 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 					case \Psr\Log\LogLevel::CRITICAL:
 					case \Psr\Log\LogLevel::ERROR:
 						$style = "\e[91m";
-						$message .= "\n";
 					break;
 					case \Psr\Log\LogLevel::WARNING:
 						$style = "\e[33m";
-						$message .= "\n";
 					break;
 					case \Psr\Log\LogLevel::NOTICE:
 						$style = "\e[93m";
-						$message .= "\n";
 					break;
 					default:
-						$style = "\x0D\e[2m";
+						$style = "\e[2m";
 				}
-				echo "$style$message\e[0m";
+				echo "\x0D$style$message\e[0m\n";
 			}
 		};
 		return $logger;
 	}
+	public function getProgressBar(): \ProgressBar\Manager {
+		return $this->progressBar;
+	}
 	public function getRootDir(): string {
 		return '/vagrant';
+	}
+	public function initProgressBar(int $current, int $max): self {
+		$this->progressBar = new \ProgressBar\Manager($current, $max);
+		return $this;
 	}
 };
 $pdo = new \PDO('uri:file://' . DB_CONNECT);

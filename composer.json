@@ -14,6 +14,7 @@
 		}
 	],
 	"require": {
+		"guiguiboy/php-cli-progress-bar": "^0.0.4",
 		"psr/log": "~1.1.0",
 		"sharkodlak/db": "~2.0.1",
 		"php": "~7.3.4",

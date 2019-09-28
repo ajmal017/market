@@ -22,53 +22,57 @@ class Futures {
 		$this->di = $di;
 	}
 
+	public function getAndStoreContracts(\Sharkodlak\Db\Db $db): void {
+		$contracts = $this->getContracts();
+		$numberOfRows = count($contracts);
+		$this->di->initProgressBar(0, $numberOfRows);
+		foreach ($contracts as $i => $row) {
+			$this->getAndStoreContractsInnerLoop($db, $row);
+		}
+	}
+
 	public function getContracts(): array {
 		return $this->di->connector->getDatabaseMetadata(self::DATABASE);
 	}
 
-	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, array $data, int $i, int $numberOfRows): float {
-		$timeCurrent = microtime(true);
-		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows, $i, $numberOfRows);
-			$this->di->logger->info($msg);
-			$timeLap = $timeCurrent;
-		}
-		$match = \preg_match('~^(?P<exchangeCode>[^_]+)_(?P<contractCode>(?P<instrumentSymbol>.+)(?P<monthCode>[a-z])(?P<year>\d{4}))$~i', $data['code'], $data['contractCode']);
-		if (!$match) {
+	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, array $data): void {
+		$contractCodeMatch = \preg_match('~^(?P<exchangeCode>[^_]+)_(?P<contractCode>(?P<instrumentSymbol>.+)(?P<monthCode>[a-z])(?P<year>\d{4}))$~i', $data['code'], $data['contractCode']);
+		if (!$contractCodeMatch) {
 			$msg = sprintf('Unknown code format "%s"!', $data['code']);
 			$this->di->logger->warning($msg);
 		}
-		$match = \preg_match('~^(?P<instrumentName>(?:(?P<exchangeCode>[A-Z]+) )?(?P<name>.*)), (?P<month>\w+) (?P<year>\d{4}) \((?P<contractCode>[A-Z]+\d{4})\)$~', $data['name'], $data['contractName']);
-		if (!$match) {
+		$contractNameMatch = \preg_match('~^(?P<instrumentName>(?:(?P<exchangeCode>[A-Z]+) )?(?P<name>.*)), (?P<month>\w+) (?P<year>\d{4}) \((?P<contractCode>[A-Z]+\d{4})\)$~', $data['name'], $data['contractName']);
+		if (!$contractNameMatch) {
 			$msg = sprintf('Unknown name format "%s"!', $data['name']);
 			$this->di->logger->warning($msg);
 		}
-		$this->checkIfExchangeCodeIsMissing($data['contractName']['exchangeCode'], $data['contractName']);
-
-		$instrumentData = [
-			'name' => $data['contractName']['name'],
-			'name_lower' => \strtolower($data['contractName']['name']),
-			'symbol' => $data['contractCode']['instrumentSymbol'],
-		];
-		$contractData = [
-			'year' => $data['contractCode']['year'],
-			'month' => $this->di->futures->getMonthNumber($data['contractCode']['monthCode']),
-			'description' => $data['description'],
-			'refreshed_at' => $data['refreshed_at'],
-			'from_date' => $data['from_date'],
-			'to_date' => $data['to_date'],
-		];
-		$exchangeCode = $data['contractName']['exchangeCode'] ?: $data['contractCode']['exchangeCode'];
-		$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
-		$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
-		if ($instrument === null) {
-			$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower']);
+		if ($contractCodeMatch && $contractNameMatch) {
+			$this->checkIfExchangeCodeIsMissing($data['contractName']['exchangeCode'], $data['contractName']);
+			$exchangeCode = $data['contractName']['exchangeCode'] ?: $data['contractCode']['exchangeCode'];
+			$instrumentData = [
+				'name' => $data['contractName']['name'],
+				'symbol' => $data['contractCode']['instrumentSymbol'],
+			];
+			$instrumentData['name_lower'] = \strtolower($instrumentData['name']);
+			$contractData = [
+				'year' => $data['contractCode']['year'],
+				'month' => $this->di->futures->getMonthNumber($data['contractCode']['monthCode']),
+				'description' => $data['description'],
+				'refreshed_at' => $data['refreshed_at'],
+				'from_date' => $data['from_date'],
+				'to_date' => $data['to_date'],
+			];
+			$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
+			$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
+			if ($instrument === null) {
+				$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower', 'exchange_id']);
+			}
+			$contractData['instrument_id'] = $instrument['id'];
+			$uniqueCodeFieldNames = ['instrument_id', 'year', 'month'];
+			$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
+			$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 		}
-		$contractData['instrument_id'] = $instrument['id'];
-		$uniqueCodeFieldNames = ['instrument_id', 'year', 'month'];
-		$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
-		$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
-		return $timeLap;
+		$this->di->progressBar->advance();
 	}
 
 	private function checkIfExchangeCodeIsMissing(?string $exchangeCode, array $contractName): bool {
@@ -81,16 +85,6 @@ class Futures {
 			return false;
 		}
 		return true;
-	}
-
-	public function getAndStoreContracts(\Sharkodlak\Db\Db $db): void {
-		$timeLap = microtime(true);
-		$contracts = $this->getContracts();
-		$numberOfRows = count($contracts);
-		foreach($contracts as $i => $row) {
-			$timeLap = $this->getAndStoreContractsInnerLoop($db, $timeLap, $row, ++$i, $numberOfRows);
-		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}
 
 	public function getData(string $code, int $year, int $month): array {
@@ -137,7 +131,7 @@ class Futures {
 
 	public function translateColumnNames(array $originalColumnNames): array {
 		$columnNames = [];
-		foreach($originalColumnNames as $key => $columnName) {
+		foreach ($originalColumnNames as $key => $columnName) {
 			$columnNames[$key] = self::$columnNames[$columnName] ?? $columnName;
 		}
 		return $columnNames;
