@@ -38,7 +38,7 @@ $di = new class implements \Sharkodlak\Market\Cot\Di {
 					default:
 						$style = "\e[2m";
 				}
-				echo "\x0D$style$message\e[0m\n";
+				fputs(STDERR, "\x0D$style$message\e[0m\n");
 			}
 		};
 		return $logger;

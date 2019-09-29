@@ -51,7 +51,7 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 					default:
 						$style = "\e[2m";
 				}
-				echo "\x0D$style$message\e[0m\n";
+				fputs(STDERR, "\x0D$style$message\e[0m\n");
 			}
 		};
 		return $logger;
