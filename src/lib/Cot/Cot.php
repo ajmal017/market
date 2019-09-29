@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-namespace Sharkodlak\Market;
+namespace Sharkodlak\Market\Cot;
 
 class Cot {
 	const READ_ONLY = 'r';
@@ -209,10 +209,10 @@ class Cot {
 	];
 	private static $fieldsTranslation = [];
 	private $instruments = [];
-	private $dbAdapter;
+	private $di;
 
-	public function __construct(\Sharkodlak\Db\Adapter\Base $dbAdapter) {
-		$this->dbAdapter = $dbAdapter;
+	public function __construct(Di $di) {
+		$this->di = $di;
 	}
 
 	public static function getUrl(?int $year = null): string {
@@ -267,29 +267,11 @@ class Cot {
 		return array_combine(self::getFieldKeys(), $line);
 	}
 
-	private function selectOrInsertReturnsId(string $counterName, array $params, string $select, string $insert,
-		array $additionalFields = []
-	): int {
-		++$this->counter[$counterName]['select'];
-		$statement = $this->dbAdapter->pdo->prepare($select);
-		$success = $statement->execute($params);
-		$id = $statement->fetchColumn();
-		if ($id === false) {
-			$statement = $this->dbAdapter->pdo->prepare($insert);
-			$success = $statement->execute($params + $additionalFields);
-			if ($success) {
-				++$this->counter[$counterName]['insert'];
-				$id = $statement->fetchColumn();
-			}
-		}
-		return $id;
-	}
-
 	private function updateCounter(string $counterName): void {
 		if (!isset($this->counter[$counterName])) {
 			$this->counter[$counterName] = ['insert' => 0, 'select' => 0];
 		}
-		foreach ($this->dbAdapter->resetQueryCounter() as $queryType => $count) {
+		foreach ($this->di->dbAdapter->resetQueryCounter() as $queryType => $count) {
 			$this->counter[$counterName][$queryType] += $count;
 		}
 	}
@@ -297,13 +279,13 @@ class Cot {
 	public function getExchangeId(string $exchange, string $exchangeCode): int {
 		if (!array_key_exists($exchange, $this->exchanges)) {
 			$exchangeFields = ['name' => $exchange];
-			['id' => $this->exchanges[$exchange]] = $this->dbAdapter->insertOrSelect(['id'], 'exchange', $exchangeFields, ['name']);
+			['id' => $this->exchanges[$exchange]] = $this->di->dbAdapter->insertOrSelect(['id'], 'exchange', $exchangeFields, ['name']);
 			$this->updateCounter('exchange');
 			$exchangeCodeFields = [
 				'exchange_id' => $this->exchanges[$exchange],
 				'code' => $exchangeCode,
 			];
-			$this->dbAdapter->insertIgnore(['exchange_id'], 'exchange_code', $exchangeCodeFields);
+			$this->di->dbAdapter->insertIgnore(['exchange_id'], 'exchange_code', $exchangeCodeFields);
 			$this->updateCounter('exchange_code');
 		}
 		return $this->exchanges[$exchange];
@@ -320,7 +302,7 @@ class Cot {
 				'name_lower' => \strtolower($instrument),
 				'contract_volume' => $contractVolume,
 			];
-			['id' => $this->instruments[$instrument]] = $this->dbAdapter->upsert(['id'], 'instrument', $fields, ['contract_volume'], ['name_lower', 'exchange_id']);
+			['id' => $this->instruments[$instrument]] = $this->di->dbAdapter->upsert(['id'], 'instrument', $fields, ['contract_volume'], ['name_lower', 'exchange_id']);
 			$this->updateCounter('instrument');
 		}
 		return $this->instruments[$instrument];
@@ -350,7 +332,7 @@ class Cot {
 					'open_interest',
 				]
 			);
-			['open_interest' => $this->cot[$instrumentId][$date]] = $this->dbAdapter->insertOrSelect(['open_interest'], 'cot', $fields, array_keys($where));
+			['open_interest' => $this->cot[$instrumentId][$date]] = $this->di->dbAdapter->insertOrSelect(['open_interest'], 'cot', $fields, array_keys($where));
 			$this->updateCounter('cot');
 		}
 		return $this->cot[$instrumentId][$date];
@@ -374,6 +356,20 @@ class Cot {
 	}
 
 	public function importFromFile(string $filename) {
+		$rows = $this->parseCsvFile($filename);
+		$this->di->initProgressBar(0, count($rows));
+		foreach ($rows as $i => $fields) {
+			[$market, $exchange] = preg_split('~\s+-\s+(?!.*\s-\s)~', $fields['Market_and_Exchange_Names']);
+			$exchangeId = $this->getExchangeId($exchange, $fields['exchangeCode']);
+			$instrumentId = $this->getInstrumentId($exchangeId, $market, $fields['Contract_Units']);
+			$date = self::getDate($fields);
+			$this->processCot($instrumentId, $date, $fields);
+			$this->di->progressBar->advance();
+		}
+	}
+
+	public function parseCsvFile(string $filename) {
+		$rows = [];
 		$firstLine = true;
 		$fp = fopen($filename, self::READ_ONLY);
 		while ($line = fgetcsv($fp)) {
@@ -382,13 +378,9 @@ class Cot {
 				self::checkFields($line);
 				$firstLine = false;
 			} else {
-				$fields = self::getNamedFields($line);
-				[$market, $exchange] = preg_split('~\s+-\s+(?!.*\s-\s)~', $fields['Market_and_Exchange_Names']);
-				$exchangeId = $this->getExchangeId($exchange, $fields['exchangeCode']);
-				$instrumentId = $this->getInstrumentId($exchangeId, $market, $fields['Contract_Units']);
-				$date = self::getDate($fields);
-				$this->processCot($instrumentId, $date, $fields);
+				$rows[] = self::getNamedFields($line);
 			}
 		}
+		return $rows;
 	}
 }
