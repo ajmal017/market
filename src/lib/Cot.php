@@ -310,6 +310,9 @@ class Cot {
 	}
 
 	public function getInstrumentId(int $exchangeId, string $instrument, ?string $contractVolume): int {
+		if ($contractVolume !== null) {
+			$contractVolume = preg_replace('~\((?:Contracts of )?(.+)\)~i', '$1', $contractVolume);
+		}
 		if (!array_key_exists($instrument, $this->instruments)) {
 			$fields = [
 				'exchange_id' => $exchangeId,
@@ -317,7 +320,7 @@ class Cot {
 				'name_lower' => \strtolower($instrument),
 				'contract_volume' => $contractVolume,
 			];
-			['id' => $this->instruments[$instrument]] = $this->dbAdapter->upsert(['id'], 'instrument', $fields, ['contract_volume'], ['name_lower']);
+			['id' => $this->instruments[$instrument]] = $this->dbAdapter->upsert(['id'], 'instrument', $fields, ['contract_volume'], ['name_lower', 'exchange_id']);
 			$this->updateCounter('instrument');
 		}
 		return $this->instruments[$instrument];
