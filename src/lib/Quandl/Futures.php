@@ -55,7 +55,7 @@ class Futures {
 			];
 			$instrumentData['name_lower'] = \strtolower($instrumentData['name']);
 			$contractData = [
-				'year' => $data['contractCode']['year'],
+				'year' => \intval($data['contractCode']['year']),
 				'month' => $this->di->futures->getMonthNumber($data['contractCode']['monthCode']),
 				'description' => $data['description'],
 				'refreshed_at' => $data['refreshed_at'],
@@ -71,6 +71,8 @@ class Futures {
 			$uniqueCodeFieldNames = ['instrument_id', 'year', 'month'];
 			$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 			$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
+			$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
+			$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractData['year'], $contractData['month']);
 		}
 		$this->di->progressBar->advance();
 	}

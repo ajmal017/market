@@ -28,13 +28,17 @@ class Connector {
 		$curl = \curl_init($url);
 		\curl_setopt_array($curl, $curlOptions);
 		$response = \curl_exec($curl);
-		$headerSize = \curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-		$header = \substr($response, 0, $headerSize);
-		\file_put_contents($headerFilename, $header);
-		if (200 == \curl_getinfo($curl, CURLINFO_RESPONSE_CODE)) {
-			\file_put_contents($filename, substr($response, $headerSize));
+		if ($response) {
+			$headerSize = \curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+			$header = \substr($response, 0, $headerSize);
+			\file_put_contents($headerFilename, $header);
+			if (200 == \curl_getinfo($curl, CURLINFO_RESPONSE_CODE)) {
+				\file_put_contents($filename, substr($response, $headerSize));
+			}
+			return $filename;
+		} else {
+			throw new \Sharkodlak\Exception\SocketTimeoutException();
 		}
-		return $filename;
 	}
 
 	public function getDatabaseMetadata(string $database): array {
@@ -44,6 +48,7 @@ class Connector {
 		$fp = fopen($filename, 'r');
 		$columnNames = [];
 		while ($line = fgetcsv($fp)) {
+			$line = array_map('\\trim', $line); // Trim each line cell
 			if (empty($columnNames)) {
 				$columnNames = $line;
 			} else {
