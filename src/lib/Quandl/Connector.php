@@ -12,8 +12,7 @@ class Connector {
 		$this->di = $di;
 	}
 
-	public function downloadFileIfMissing(string $url, string $database): string {
-		$filename = $this->di->rootDir . "/data/quandl/{$database}_metadata.csv.zip";
+	public function downloadFileIfMissing(string $url, string $filename): string {
 		$headerFilename = "$filename.head";
 		$curlOptions = [
 			CURLOPT_FILETIME => true,
@@ -31,9 +30,26 @@ class Connector {
 		if ($response) {
 			$headerSize = \curl_getinfo($curl, CURLINFO_HEADER_SIZE);
 			$header = \substr($response, 0, $headerSize);
-			\file_put_contents($headerFilename, $header);
-			if (200 == \curl_getinfo($curl, CURLINFO_RESPONSE_CODE)) {
-				\file_put_contents($filename, substr($response, $headerSize));
+			if (\preg_match('~x-ratelimit-remaining: (\d+)~', $header, $matches)) {
+				$this->di->logger->info('API limit ' . $matches[1]);
+			}
+			$dirname = \dirname($filename);
+			$httpStatusCode = \curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+			switch ($httpStatusCode) {
+				case 200:
+					if (!\is_dir($dirname)) {
+						\mkdir($dirname, 0775, true);
+					}
+					\file_put_contents($headerFilename, $header);
+					\file_put_contents($filename, substr($response, $headerSize));
+				case 304:
+					break;
+				default:
+					$lastHeaderStart = \strrpos($header, "\r\n\r\n", -5) ?: 0;
+					$lastHeaderStart += $lastHeaderStart ? 4 : 0;
+					$lastHeader = \substr($header, $lastHeaderStart);
+					$httpLine = \substr($lastHeader, 0, \strpos($lastHeader, "\r\n"));
+					throw new \Sharkodlak\Exception\HTTPException($httpLine, $httpStatusCode);
 			}
 			return $filename;
 		} else {
@@ -44,8 +60,9 @@ class Connector {
 	public function getDatabaseMetadata(string $database): array {
 		$url = \sprintf(self::DATABASE_METADATA_URL, $database, $this->di->apiKey);
 		$filename = "{$database}_metadata.csv";
-		$filename = 'zip://' . $this->downloadFileIfMissing($url, $database) . "#$filename";
-		$fp = fopen($filename, 'r');
+		$filePath = $this->di->rootDir . "/data/quandl/$filename.zip";
+		$filePath = 'zip://' . $this->downloadFileIfMissing($url, $filePath) . "#$filename";
+		$fp = fopen($filePath, 'r');
 		$columnNames = [];
 		while ($line = fgetcsv($fp)) {
 			$line = array_map('\\trim', $line); // Trim each line cell
@@ -60,11 +77,10 @@ class Connector {
 
 	public function getDataset(string $database, string $dataset): array {
 		$url = \sprintf(self::DATASET_URL, $database, $dataset, $this->di->apiKey);
-		$response = \file_get_contents($url);
-		if ($response === false) {
-			throw new \Exception(sprintf("Can not download URL '%s'!", $url));
-		}
-		$data = \json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+		$filePath = $this->di->rootDir . "/data/quandl/$database/$dataset.json";
+		$filename = $this->downloadFileIfMissing($url, $filePath);
+		$json = \file_get_contents($filename);
+		$data = \json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 		return $data['dataset'];
 	}
 }

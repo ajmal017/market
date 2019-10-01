@@ -27,7 +27,13 @@ class Futures {
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
 		foreach ($contracts as $i => $row) {
-			$this->getAndStoreContractsInnerLoop($db, $row);
+			try {
+				$this->getAndStoreContractsInnerLoop($db, $row);
+			} catch (\Sharkodlak\Exception\HTTPException $e) {
+				$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
+				// Log HTTP status, continue with next contract
+			}
+			$this->di->progressBar->advance();
 		}
 	}
 
@@ -74,7 +80,6 @@ class Futures {
 			$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
 			$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractData['year'], $contractData['month']);
 		}
-		$this->di->progressBar->advance();
 	}
 
 	private function checkIfExchangeCodeIsMissing(?string $exchangeCode, array $contractName): bool {
