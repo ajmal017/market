@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
+define('SKIP', $argv[1] && is_numeric($argv[1]) ? intval($argv[1]) : 0);
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 
@@ -35,6 +36,7 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 	public function getLogger(): \Psr\Log\LoggerInterface {
 		$logger = new class extends \Psr\Log\AbstractLogger {
 			public function log($level, $message, array $context = []) {
+				$styleEnd = "\e[0m\n";
 				switch ($level) {
 					case \Psr\Log\LogLevel::EMERGENCY:
 					case \Psr\Log\LogLevel::ALERT:
@@ -46,12 +48,13 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 						$style = "\e[33m";
 					break;
 					case \Psr\Log\LogLevel::NOTICE:
-						$style = "\e[93m";
+						$style = "\x0D\e[93m";
+						$styleEnd = "\e[0m";
 					break;
 					default:
 						$style = "\e[2m";
 				}
-				fputs(STDERR, "\x0D$style$message\e[0m\n");
+				fputs(STDERR, "$style$message");
 			}
 		};
 		return $logger;
@@ -72,5 +75,5 @@ $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
 $futures = new Sharkodlak\Market\Quandl\Futures($di);
-$futures->getAndStoreContracts($db);
+$futures->getAndStoreContracts($db, SKIP);
 $futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);

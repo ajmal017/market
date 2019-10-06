@@ -22,18 +22,20 @@ class Futures {
 		$this->di = $di;
 	}
 
-	public function getAndStoreContracts(\Sharkodlak\Db\Db $db): void {
+	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, int $skip = 0): void {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
 		foreach ($contracts as $i => $row) {
-			try {
-				$this->getAndStoreContractsInnerLoop($db, $row);
-			} catch (\Sharkodlak\Exception\HTTPException $e) {
-				$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
-				// Log HTTP status, continue with next contract
+			if ($i >= $skip) {
+				try {
+					$this->getAndStoreContractsInnerLoop($db, $row);
+				} catch (\Sharkodlak\Exception\HTTPException $e) {
+					$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
+					// Log HTTP status, continue with next contract
+				}
 			}
-			$this->di->progressBar->advance();
+			$this->di->progressBar->update($i);
 		}
 	}
 
@@ -103,8 +105,8 @@ class Futures {
 		$fields = [
 			'year' => $year,
 			'month' => $month,
-			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id = (
-					SELECT exchange_id FROM exchange_code WHERE code = :exchange_code
+			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id IN (
+					SELECT exchange_id FROM exchange WHERE main_exchange_code = :exchange_code
 				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
 		];
 		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
