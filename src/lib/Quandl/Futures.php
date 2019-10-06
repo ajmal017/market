@@ -96,9 +96,31 @@ class Futures {
 		return true;
 	}
 
+	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): void {
+		$timeLap = microtime(true);
+		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
+		$numberOfRows = count($data['data']);
+		$columnNames = $this->translateColumnNames($data['column_names']);
+		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $year, $month);
+		foreach ($data['data'] as $i => $dailyData) {
+			$dailyData = \array_combine($columnNames, $dailyData);
+			$dailyData['contract_id'] = $contractId;
+			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
+		}
+		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
+	}
+
 	public function getData(string $code, int $year, int $month): array {
 		$dataset = $code . $this->di->futures->getMonthLetter($month) . $year;
 		return $this->di->connector->getDataset(self::DATABASE, $dataset);
+	}
+
+	public function translateColumnNames(array $originalColumnNames): array {
+		$columnNames = [];
+		foreach ($originalColumnNames as $key => $columnName) {
+			$columnNames[$key] = self::$columnNames[$columnName] ?? $columnName;
+		}
+		return $columnNames;
 	}
 
 	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): int {
@@ -122,27 +144,5 @@ class Futures {
 		}
 		$db->adapter->insertIgnore(['date', 'contract_id'], 'trade_day', $dailyData);
 		return $timeLap;
-	}
-
-	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): void {
-		$timeLap = microtime(true);
-		$data = $this->getData($exchangeCode . '_' . $instrumentSymbol, $year, $month);
-		$numberOfRows = count($data['data']);
-		$columnNames = $this->translateColumnNames($data['column_names']);
-		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $year, $month);
-		foreach ($data['data'] as $i => $dailyData) {
-			$dailyData = \array_combine($columnNames, $dailyData);
-			$dailyData['contract_id'] = $contractId;
-			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
-		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
-	}
-
-	public function translateColumnNames(array $originalColumnNames): array {
-		$columnNames = [];
-		foreach ($originalColumnNames as $key => $columnName) {
-			$columnNames[$key] = self::$columnNames[$columnName] ?? $columnName;
-		}
-		return $columnNames;
 	}
 }
