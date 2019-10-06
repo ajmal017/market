@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
-define('SKIP', $argv[1] && is_numeric($argv[1]) ? intval($argv[1]) : 0);
+define('SKIP', isset($argv[1]) && is_numeric($argv[1]) ? intval($argv[1]) : 0);
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 

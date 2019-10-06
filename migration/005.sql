@@ -10,6 +10,9 @@ ALTER TABLE exchange_code
 
 UPDATE exchange_code SET main = NULL WHERE code IN ('ICU', 'ICUS', 'CBT', 'NYME', 'CMX');
 
+INSERT INTO exchange_code (exchange_id, code) VALUES
+	((SELECT id FROM exchange WHERE name = 'ICE FUTURES ENERGY DIV'), 'IFED');
+
 ALTER TABLE exchange_code
 	ALTER COLUMN main SET DEFAULT NULL;
 
