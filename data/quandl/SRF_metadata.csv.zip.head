@@ -1,36 +1,36 @@
 HTTP/2 302 
-date: Sun, 06 Oct 2019 23:03:44 GMT
+date: Mon, 07 Oct 2019 06:33:19 GMT
 content-type: text/html; charset=utf-8
-content-length: 1559
-set-cookie: __cfduid=d724c478304b3fadc1db984a7f166eabd1570403023; expires=Mon, 05-Oct-20 23:03:43 GMT; path=/; domain=.quandl.com; HttpOnly
+content-length: 1593
+set-cookie: __cfduid=d7b117cdafa4f496a0d5f5c519b3516d61570429998; expires=Tue, 06-Oct-20 06:33:18 GMT; path=/; domain=.quandl.com; HttpOnly
 allow: GET, HEAD, POST, PUT, DELETE, OPTIONS, PATCH
 cache-control: no-cache
-location: https://quandl-production-timeseries.s3.amazonaws.com/metadata/SRF/SRF_metadata.csv.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAUOUQ74XWOFZGP32C%2F20191006%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20191006T230344Z&X-Amz-Expires=120&X-Amz-SignedHeaders=host&X-Amz-Security-Token=AgoJb3JpZ2luX2VjEH8aCXVzLWVhc3QtMSJHMEUCIQDUTLbUJqlNy2m5cWhNnPbw%2Bx1%2BI1jia5UA1c3mcML3fwIgeK52qdc9mNC%2F2vexSVutkL8rCnhn1A3ddR2YiDOm15Eq2gMIaBABGgwzMDYzMjA1MDAyMDQiDOv9c%2BXU4uKPpIRrgSq3AxulWFxqqWSpFRbA4%2FUB%2BUOEbV35p7TT9aZvSpuwusfetS%2BTJcRu6mZmCnGZdgofzNjGWxABIg%2FnvKpRL6lUsXZ%2FTaxOpYo9utKTmf8EAVCkm8Af2u%2FBiuXCg0j7svbBf%2FtNYxnB6MNP%2BEzZgfmdKtYDjjPCdya1LpnsWgDzFfNetyNoiQBCGZZftBW7CKB1XDZT9Pcg20HCNl%2BUdY5aMlfGvuRdguVHh%2Fo2Yw%2FwUYosEWTmAoA9dVUrpa6ZhlQg%2BpM46oB5QHVMJ8QSaWWh%2F9WHfP8qQvLzgLLXDJAAzwn9z1EPVt3W2RL3QqOEBWUkzIqvde%2BsX3I2FQA5FqCpQq8nG7kMMh63hErLELgz646yeZfzsspntGHAcTisGi5UGj%2FYG9fSuE3ehGjAqr%2Bmv871%2FDM8UtFVbVzOOqk0nYKyLSiTOMoNa3WQrT4%2BbQhfM9G8bHW1DUzV47xb5z50%2FhVv93al%2BHh3oI1tg50qsfvU%2BsQ7rdwp6dxUf4ZagseiysiV6YviGUPuOHFojhs%2F7wqyLW63fN5lcHhkJndS59BpmFIYVX%2BFwQRa7FUmy3tUuYf0QsAPi9kwnuDp7AU6tAHBsCKqeQGrK8iHy3XemO8XeKxYH8Osqvue8Gcb%2BW0Ud5VqQhWQMsy%2F16AHBt6t3yrGjmQVqrOUgiN7xKzdLtbChAI%2FcCITJb7faDBuQTozYUmv75ip35OHzuP%2BC3Le3mgKghUgokviK5GXi7ETYxZHBi3HMo%2F%2FVw3SBs94I3H9PcYYwcU%2F07W54DA39jrcCfGv0f27d03IpEUdPp%2BZncLDxFU6%2Fc9tSKRDWjNLAlSk4oiJUTc%3D&X-Amz-Signature=504fe600a6f769f5ebfb4ed515bc2d1a54b4ea8013955f39a3d0bab02b7a1c6a
+location: https://quandl-production-timeseries.s3.amazonaws.com/metadata/SRF/SRF_metadata.csv.zip?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAUOUQ74XWLLNI4SV5%2F20191007%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20191007T063319Z&X-Amz-Expires=120&X-Amz-SignedHeaders=host&X-Amz-Security-Token=AgoJb3JpZ2luX2VjEIf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIHkuiANx5RNOTFp3RPoEjJYbm1rzso7WWqejltLaBO2DAiEA4fxKp9loJef%2BDA%2BZDdA4gGbAVgzYRxfQGlIUH4gDcSoq2gMIcBABGgwzMDYzMjA1MDAyMDQiDDs%2FfIrhJHJCzsffwSq3A3yQlR%2BuIDTMRTPkv38UUVIHnDoickoqNjrrJvjl9nQCbwY28HyzCQ7wkyY4XJdeaoyxd4U1VZSsr%2Fu%2B0VkGcSqALzgN%2FqvUowUWvY1berF5hg%2B6iF42m7s2%2FjijxKi4HnGyIS%2B9RrIDWUuIx%2FgrDwrRvJWLoQ7anuREEvpjj23MLYvWqusCKAOD5XuTGqg71EIwou8N6PKypkPDwqasASmsNv4aQWNsjQcXuj4Q82UcyOfweNs%2BZLmhLJQw1QWoMu2wj77VgXTB%2B8VcSUwXO%2BOSTuTPHDgPhQ%2BTy%2BHm%2Bs3YjQlx%2BVBWu37PqFFHpMDizzETh%2BVDFHDjQ2At9m9iInV6gf3%2FCyMezljfgFohmIFXk7%2FQmIE%2FQxnCxr38tWhsIm8X5zuJEEplmHzn9av4u6uHMcaHSeBVC%2B3%2B8KkeFprzzJU8jEmbz1bV3WuMzZ3AdfBDYvASSkzPXInoIJ7TvDQzJFrWzAdNFZVJYv2HIUzYfOecrK%2BiDmTyWBmoiQUv3vPuFyINZEnGem87lB8AG%2FkuhdxIbDjCcjrfROeeJ201l4qdPA8fojvAgrrDyZLrqR%2B%2ByvlP%2BfQwpLPr7AU6tAGODiZ%2F%2FB4fxbXWqvq7NL8pFYhhPpRB9m%2FsskdvlPDFB3PguBjFdqx6hHae6CH7p%2F2YzbstsB63yAGkpnjiUj%2Bka3u1dQGCi%2FVgVe6O6WoohTT9tewRVkA8PtLGDl%2BQEVrqSH1szTYaSj9nDOhZvLh52Ja1fGjBd6Jw1giwRtjodGYkNmLCsySGukvjudrTnm12SJdPJXwLpUIG%2BBnqOxvpWbq11hJYVdStA8SC75KwqQ4af1M%3D&X-Amz-Signature=d4550b5811055f6138f13d3bd47cc75cf60dfe58f7f099f167132f0a6d90997e
 vary: Origin
 x-content-type-options: nosniff
 x-frame-options: SAMEORIGIN
 x-rack-cors: miss; no-origin
 x-ratelimit-limit: 50000
-x-ratelimit-remaining: 49996
-x-request-id: 7a9e1a2e-fcf7-43bb-8e25-0a792a99abee
-x-runtime: 0.188002
+x-ratelimit-remaining: 45100
+x-request-id: 6b18d601-5662-4f19-b2cf-b0e1c93e36d7
+x-runtime: 0.346211
 x-xss-protection: 1; mode=block
 cf-cache-status: DYNAMIC
 expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
 server: cloudflare
-cf-ray: 521b4531693359e8-VIE
+cf-ray: 521dd7c29b258c98-VIE
 
 HTTP/1.1 200 OK
-x-amz-id-2: QIvRCpS4ElhgR6JEMtjTSjsd2bdnqViBEYOd9IflFDxNhOqbnIRWNsnTlYG4uk0vVeEjZCV8aCc=
-x-amz-request-id: 99C9483B352A93A3
-Date: Sun, 06 Oct 2019 23:03:46 GMT
-Last-Modified: Sat, 05 Oct 2019 03:38:07 GMT
-x-amz-expiration: expiry-date="Wed, 30 Sep 2020 00:00:00 GMT", rule-id="ExpirationDelay"
-ETag: "b6adbe1315a63e2313c4e8b68338108e"
+x-amz-id-2: uqif62HHnjUkMDwvXrWW8BdK+X4i/INzrwLBDJkEykfxLfl+CPD60Cija7COUC5S2NxamcCOURA=
+x-amz-request-id: 1C6DBDC78707A7AC
+Date: Mon, 07 Oct 2019 06:33:22 GMT
+Last-Modified: Mon, 07 Oct 2019 03:36:29 GMT
+x-amz-expiration: expiry-date="Fri, 02 Oct 2020 00:00:00 GMT", rule-id="ExpirationDelay"
+ETag: "94c59548e56a5696a6895182646fa51b"
 x-amz-server-side-encryption: AES256
-x-amz-version-id: dF1kdyq5FArpxEtiHstiuhZCcUrb6ft_
+x-amz-version-id: mny.PWoDERf8nRXx83tTw5NRdlEyZR4h
 Accept-Ranges: bytes
 Content-Type: application/zip
-Content-Length: 323442
+Content-Length: 323306
 Server: AmazonS3
 

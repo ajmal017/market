@@ -1,0 +1,2 @@
+ALTER TABLE trade_day
+	ALTER COLUMN volume TYPE NUMERIC;
