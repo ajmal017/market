@@ -29,6 +29,8 @@ class Futures {
 		foreach ($contracts as $i => $row) {
 			if ($i >= $skip) {
 				try {
+					$msg = sprintf("Row %d.", $i);
+					$this->di->logger->debug($msg);
 					$this->getAndStoreContractsInnerLoop($db, $row);
 				} catch (\Sharkodlak\Exception\HTTPException $e) {
 					$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);

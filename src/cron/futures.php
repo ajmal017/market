@@ -35,26 +35,26 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 	}
 	public function getLogger(): \Psr\Log\LoggerInterface {
 		$logger = new class extends \Psr\Log\AbstractLogger {
+			static private $defaultBashStyle = "\e[2m";
+			static private $defaultBashStyleEnd = " \e[0m";
+			static private $bashStyle = [
+				\Psr\Log\LogLevel::EMERGENCY => "\e[91m",
+				\Psr\Log\LogLevel::ALERT => "\e[91m",
+				\Psr\Log\LogLevel::CRITICAL => "\e[91m",
+				\Psr\Log\LogLevel::ERROR => "\e[91m",
+				\Psr\Log\LogLevel::WARNING => "\e[33m",
+				\Psr\Log\LogLevel::NOTICE => "\e[93m",
+				\Psr\Log\LogLevel::INFO => "\e[2m",
+			];
+			static private $stdout = [\Psr\Log\LogLevel::NOTICE, \Psr\Log\LogLevel::INFO];
 			public function log($level, $message, array $context = []) {
-				$styleEnd = "\e[0m\n";
-				switch ($level) {
-					case \Psr\Log\LogLevel::EMERGENCY:
-					case \Psr\Log\LogLevel::ALERT:
-					case \Psr\Log\LogLevel::CRITICAL:
-					case \Psr\Log\LogLevel::ERROR:
-						$style = "\e[91m";
-					break;
-					case \Psr\Log\LogLevel::WARNING:
-						$style = "\e[33m";
-					break;
-					case \Psr\Log\LogLevel::NOTICE:
-						$style = "\x0D\e[93m";
-						$styleEnd = "\e[0m";
-					break;
-					default:
-						$style = "\e[2m";
+				$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
+				$message = $styleStart . $message . self::$defaultBashStyleEnd;
+				if (in_array($level, self::$stdout)) {
+					echo $message;
+				} else {
+					fputs(STDERR, $message);
 				}
-				fputs(STDERR, "$style$message");
 			}
 		};
 		return $logger;

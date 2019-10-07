@@ -31,7 +31,8 @@ class Connector {
 			$headerSize = \curl_getinfo($curl, CURLINFO_HEADER_SIZE);
 			$header = \substr($response, 0, $headerSize);
 			if (\preg_match('~x-ratelimit-remaining: (\d+)~', $header, $matches)) {
-				$this->di->logger->info('API limit ' . $matches[1]);
+				$msg = sprintf('API limit %d.', $matches[1]);
+				$this->di->logger->info($msg);
 			}
 			$dirname = \dirname($filename);
 			$httpStatusCode = \curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
