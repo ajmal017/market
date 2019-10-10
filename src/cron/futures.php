@@ -4,11 +4,12 @@ declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
 define('SKIP', isset($argv[1]) && is_numeric($argv[1]) ? intval($argv[1]) : 0);
+define('LOG_LEVEL', $argv[2] ?? 'debug');
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 
 $apiKey = trim(file_get_contents(QUANDL_API_KEY));
-$di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl\Di {
+$di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Db\Adapter\Di, \Sharkodlak\Market\Quandl\Di {
 	private $privateApiKey;
 	private $services = [];
 	public function __construct($apiKey) {
@@ -46,14 +47,17 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 				\Psr\Log\LogLevel::NOTICE => "\e[93m",
 				\Psr\Log\LogLevel::INFO => "\e[2m",
 			];
-			static private $stdout = [\Psr\Log\LogLevel::NOTICE, \Psr\Log\LogLevel::INFO];
+			static private $stdout = [\Psr\Log\LogLevel::NOTICE, \Psr\Log\LogLevel::INFO, \Psr\Log\LogLevel::DEBUG];
 			public function log($level, $message, array $context = []) {
-				$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
-				$message = $styleStart . $message . self::$defaultBashStyleEnd;
-				if (in_array($level, self::$stdout)) {
-					echo $message;
-				} else {
-					fputs(STDERR, $message);
+				$logLevelName = \strtoupper(LOG_LEVEL);
+				if ($level >= \constant("\\Psr\\Log\\LogLevel::$logLevelName")) {
+					$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
+					$message = $styleStart . $message . self::$defaultBashStyleEnd;
+					if (in_array($level, self::$stdout)) {
+						echo $message;
+					} else {
+						fputs(STDERR, $message);
+					}
 				}
 			}
 		};
@@ -72,7 +76,7 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Market\Quandl
 };
 $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-$dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo);
+$dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo, $di);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
 $futures = new Sharkodlak\Market\Quandl\Futures($di);
 $futures->getAndStoreContracts($db, SKIP);
