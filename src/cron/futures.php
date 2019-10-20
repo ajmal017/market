@@ -47,17 +47,12 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Db\Adapter\Di
 				\Psr\Log\LogLevel::NOTICE => "\e[93m",
 				\Psr\Log\LogLevel::INFO => "\e[2m",
 			];
-			static private $stdout = [\Psr\Log\LogLevel::NOTICE, \Psr\Log\LogLevel::INFO, \Psr\Log\LogLevel::DEBUG];
 			public function log($level, $message, array $context = []) {
 				$logLevelName = \strtoupper(LOG_LEVEL);
 				if ($level >= \constant("\\Psr\\Log\\LogLevel::$logLevelName")) {
 					$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
 					$message = $styleStart . $message . self::$defaultBashStyleEnd;
-					if (in_array($level, self::$stdout)) {
-						echo $message;
-					} else {
-						fputs(STDERR, $message);
-					}
+					fputs(STDERR, $message);
 				}
 			}
 		};
@@ -78,6 +73,6 @@ $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo, $di);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
-$futures = new Sharkodlak\Market\Quandl\Futures($di);
+$futures = new Sharkodlak\Market\Quandl\Adapter\Chris($di);
 $futures->getAndStoreContracts($db, SKIP);
 $futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);
