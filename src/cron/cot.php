@@ -4,8 +4,10 @@ declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
 define('YEAR', $argv[1] ?? null);
+define('LOG_LEVEL', $argv[2] ?? 'debug');
 
-$di = new class implements \Sharkodlak\Market\Cot\Di {
+
+$di = new class implements \Sharkodlak\Market\Cot\Di, \Sharkodlak\Db\Adapter\Di {
 	private $services = [];
 	public function __get($name) {
 		if (!isset($services[$name])) {
@@ -17,28 +19,28 @@ $di = new class implements \Sharkodlak\Market\Cot\Di {
 	public function getDbAdapter(): \Sharkodlak\Db\Adapter\Base {
 		$pdo = new \PDO('uri:file:///etc/webconf/market/connect.powerUser.pgsql');
 		$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-		return new \Sharkodlak\Db\Adapter\Postgres($pdo);
+		return new \Sharkodlak\Db\Adapter\Postgres($pdo, $this);
 	}
 	public function getLogger(): \Psr\Log\LoggerInterface {
 		$logger = new class extends \Psr\Log\AbstractLogger {
+			static private $defaultBashStyle = "\e[2m";
+			static private $defaultBashStyleEnd = " \e[0m";
+			static private $bashStyle = [
+				\Psr\Log\LogLevel::EMERGENCY => "\e[91m",
+				\Psr\Log\LogLevel::ALERT => "\e[91m",
+				\Psr\Log\LogLevel::CRITICAL => "\e[91m",
+				\Psr\Log\LogLevel::ERROR => "\e[91m",
+				\Psr\Log\LogLevel::WARNING => "\e[33m",
+				\Psr\Log\LogLevel::NOTICE => "\e[93m",
+				\Psr\Log\LogLevel::INFO => "\e[2m",
+			];
 			public function log($level, $message, array $context = []) {
-				switch ($level) {
-					case \Psr\Log\LogLevel::EMERGENCY:
-					case \Psr\Log\LogLevel::ALERT:
-					case \Psr\Log\LogLevel::CRITICAL:
-					case \Psr\Log\LogLevel::ERROR:
-						$style = "\e[91m";
-					break;
-					case \Psr\Log\LogLevel::WARNING:
-						$style = "\e[33m";
-					break;
-					case \Psr\Log\LogLevel::NOTICE:
-						$style = "\e[93m";
-					break;
-					default:
-						$style = "\e[2m";
+				$logLevelName = \strtoupper(LOG_LEVEL);
+				if ($level >= \constant("\\Psr\\Log\\LogLevel::$logLevelName")) {
+					$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
+					$message = $styleStart . $message . self::$defaultBashStyleEnd;
+					fputs(STDERR, $message);
 				}
-				fputs(STDERR, "\x0D$style$message\e[0m\n");
 			}
 		};
 		return $logger;
@@ -55,7 +57,7 @@ $di = new class implements \Sharkodlak\Market\Cot\Di {
 	}
 };
 $cot = new \Sharkodlak\Market\Cot\Cot($di);
-$filename = YEAR === null ?
+$filename = empty(YEAR) ?
 	$cot->downloadFileIfMissing() :
 	$di->getRootDir() . '/data/cot/com_disagg_txt_' . YEAR . '.zip';
 $filename = $cot->extractFile($filename);
