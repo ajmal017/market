@@ -3,8 +3,51 @@
 declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
-define('SKIP', isset($argv[1]) && is_numeric($argv[1]) ? intval($argv[1]) : 0);
-define('LOG_LEVEL', $argv[2] ?? 'debug');
+$commando = new \Commando\Command();
+$commando->setHelp('Import futures data.');
+$commando->option('s')
+	->aka('source')
+	->describedAs('Specify QUANDL database as source.')
+	->must(function($source) {
+		$sources = ['CHRIS', 'SRF'];
+		return \in_array(\strtoupper($source), $sources);
+	})
+	->default('CHRIS')
+	->map(function($source) {
+		return \ucfirst(\strtolower($source));
+	});
+$commando->option('skip')
+	->describedAs('Skip rows defined by this number.')
+	->must(function($skip) {
+		return \ctype_digit($skip);
+	})
+	->default('0')
+	->map(function($skip) {
+		return \intval($skip);
+	});
+$commando->option('log-level')
+	->describedAs('Print logs with this or higher level to STDERR. Default is "debug" level.')
+	->must(function($logLevel) {
+		$levels = [
+			\Psr\Log\LogLevel::EMERGENCY,
+			\Psr\Log\LogLevel::ALERT,
+			\Psr\Log\LogLevel::CRITICAL,
+			\Psr\Log\LogLevel::ERROR,
+			\Psr\Log\LogLevel::WARNING,
+			\Psr\Log\LogLevel::NOTICE,
+			\Psr\Log\LogLevel::INFO,
+			\Psr\Log\LogLevel::DEBUG,
+		];
+		return \in_array(\strtolower($logLevel), $levels);
+	})
+	->default(\Psr\Log\LogLevel::DEBUG);
+$commando->option('symbol')
+	->describedAs('Import only future contracts with this symbol.')
+	->default(null);
+
+
+define('LOG_LEVEL', $commando['log-level']);
+
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
 
@@ -74,5 +117,4 @@ $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo, $di);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
 $futures = new Sharkodlak\Market\Quandl\Adapter\Chris($di);
-$futures->getAndStoreContracts($db, SKIP);
-$futures->getAndStoreData($db, 'ICE', 'CC', 2016, 3);
+$futures->getAndStoreContracts($db, $commando['skip']);

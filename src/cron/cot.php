@@ -3,9 +3,30 @@
 declare(strict_types=1);
 require __DIR__ . '/../../vendor/autoload.php';
 
-define('YEAR', $argv[1] ?? null);
-define('LOG_LEVEL', $argv[2] ?? 'debug');
+$commando = new \Commando\Command();
+$commando->setHelp('Import year of COT data.');
+$commando->option('y')
+	->aka('year')
+	->describedAs('Import specified year. If not set import current year.')
+	->default(null);
+$commando->option('log-level')
+	->describedAs('Print logs with this or higher level to STDERR.')
+	->must(function($logLevel) {
+		$levels = [
+			\Psr\Log\LogLevel::EMERGENCY,
+			\Psr\Log\LogLevel::ALERT,
+			\Psr\Log\LogLevel::CRITICAL,
+			\Psr\Log\LogLevel::ERROR,
+			\Psr\Log\LogLevel::WARNING,
+			\Psr\Log\LogLevel::NOTICE,
+			\Psr\Log\LogLevel::INFO,
+			\Psr\Log\LogLevel::DEBUG,
+		];
+		return \in_array(\strtolower($logLevel), $levels);
+	})
+	->default(\Psr\Log\LogLevel::DEBUG);
 
+define('LOG_LEVEL', $commando['log-level']);
 
 $di = new class implements \Sharkodlak\Market\Cot\Di, \Sharkodlak\Db\Adapter\Di {
 	private $services = [];
@@ -57,9 +78,9 @@ $di = new class implements \Sharkodlak\Market\Cot\Di, \Sharkodlak\Db\Adapter\Di 
 	}
 };
 $cot = new \Sharkodlak\Market\Cot\Cot($di);
-$filename = empty(YEAR) ?
+$filename = empty($commando['year']) ?
 	$cot->downloadFileIfMissing() :
-	$di->getRootDir() . '/data/cot/com_disagg_txt_' . YEAR . '.zip';
+	$di->getRootDir() . '/data/cot/com_disagg_txt_' . $commando['year'] . '.zip';
 $filename = $cot->extractFile($filename);
 $cot->importFromFile($filename);
 foreach ($cot->counter as $table => $counts) {

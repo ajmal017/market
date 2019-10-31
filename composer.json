@@ -15,6 +15,7 @@
 	],
 	"require": {
 		"guiguiboy/php-cli-progress-bar": "^0.0.4",
+		"nategood/commando": "*",
 		"psr/log": "~1.1.0",
 		"sharkodlak/db": "~2.1.2",
 		"sharkodlak/exception": "~1.0.2",
