@@ -45,26 +45,11 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 		return null;
 	}
 
-	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $depth): void {
-		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
-		$data = $this->getData($exchangeInstrument, $depth);
-		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $depth);
-		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+	public function getDatabase(): string {
+		return self::DATABASE;
 	}
 
-	public function getData(string $code, int $depth): array {
-		$dataset = $code . $depth;
-		return $this->di->connector->getDataset(self::DATABASE, $dataset);
-	}
-
-	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $depth): int {
-		$fields = [
-			'depth' => $depth,
-			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id IN (
-					SELECT exchange_id FROM exchange WHERE main_exchange_code = :exchange_code
-				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
-		];
-		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
-		return $contractId;
+	public function getDataset(string $code, array $contractIdentifier): string {
+		return $code . $contractIdentifier['depth'];
 	}
 }

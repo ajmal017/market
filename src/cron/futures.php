@@ -5,18 +5,28 @@ require __DIR__ . '/../../vendor/autoload.php';
 
 $commando = new \Commando\Command();
 $commando->setHelp('Import futures data.');
-$commando->option('s')
-	->aka('source')
+$commando->option('source')
 	->describedAs('Specify QUANDL database as source.')
 	->must(function($source) {
-		$sources = ['CHRIS', 'SRF'];
-		return \in_array(\strtoupper($source), $sources);
+		$sources = ['Chris', 'Srf'];
+		return \in_array(\ucfirst(\strtolower($source)), $sources);
 	})
-	->default('CHRIS')
+	->default('Chris')
 	->map(function($source) {
 		return \ucfirst(\strtolower($source));
 	});
+$commando->option('batch')
+	->aka('limit')
+	->describedAs('Import only this number of rows.')
+	->must(function($batch) {
+		return \ctype_digit($batch);
+	})
+	->default(PHP_INT_MAX)
+	->map(function($batch) {
+		return \intval($batch);
+	});
 $commando->option('skip')
+	->aka('offset')
 	->describedAs('Skip rows defined by this number.')
 	->must(function($skip) {
 		return \ctype_digit($skip);
@@ -26,7 +36,7 @@ $commando->option('skip')
 		return \intval($skip);
 	});
 $commando->option('log-level')
-	->describedAs('Print logs with this or higher level to STDERR. Default is "debug" level.')
+	->describedAs('Print logs with this or higher level to STDERR. Default is "notice" level.')
 	->must(function($logLevel) {
 		$levels = [
 			\Psr\Log\LogLevel::EMERGENCY,
@@ -40,7 +50,7 @@ $commando->option('log-level')
 		];
 		return \in_array(\strtolower($logLevel), $levels);
 	})
-	->default(\Psr\Log\LogLevel::DEBUG);
+	->default(\Psr\Log\LogLevel::NOTICE);
 $commando->option('symbol')
 	->describedAs('Import only future contracts with this symbol.')
 	->default(null);
@@ -116,8 +126,11 @@ $pdo = new \PDO('uri:file://' . DB_CONNECT);
 $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo, $di);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
-$futures = new Sharkodlak\Market\Quandl\Adapter\Chris($di);
+$adapterClass = "\\Sharkodlak\\Market\\Quandl\\Adapter\\" . $commando['source'];
+$futures = new $adapterClass($di);
 $commando = [
+	'batch' => $commando['batch'],
+	'reimport' => $commando['reimport'],
 	'skip' => $commando['skip'],
 	'symbol' => $commando['symbol'],
 ];

@@ -16,18 +16,22 @@ abstract class Futures {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
+		$settings['batch'] = (int) $settings['batch'] ?? PHP_INT_MAX;
+		$settings['skip'] = (int) $settings['skip'] ?? 0;
 		foreach ($contracts as $i => $row) {
-			if ($i >= ($settings['skip'] ?? 0)) {
+			$this->di->progressBar->update($i);
+			if ($i >= $settings['skip']) {
+				if ($i >= $settings['skip'] + $settings['batch']) {
+					break;
+				}
 				try {
 					$msg = sprintf("Row %d.", $i);
 					$this->di->logger->debug($msg);
 					$this->getAndStoreContractsInnerLoop($db, $row, $settings);
 				} catch (\Sharkodlak\Exception\HTTPException $e) {
 					$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
-					// Log HTTP status, continue with next contract
 				}
 			}
-			$this->di->progressBar->update($i);
 		}
 	}
 
@@ -80,7 +84,7 @@ abstract class Futures {
 				$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 				$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 				$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
-				$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], ...\array_values($contractIdentifier));
+				$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractIdentifier);
 			}
 		}
 	}
@@ -89,6 +93,32 @@ abstract class Futures {
 	abstract protected function getContractNamePattern(): string;
 	abstract protected function getContractIdentifier(array $matchesCode, array $matchesName): array;
 	abstract protected function getContractUniqueFieldNames(): array;
+
+	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier, array $settings = []): void {
+		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
+		$data = $this->getData($exchangeInstrument, $contractIdentifier);
+		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $contractIdentifier);
+		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+	}
+
+	public function getData(string $code, array $contractIdentifier): array {
+		$database = $this->getDatabase();
+		$dataset = $this->getDataset($code, $contractIdentifier);
+		return $this->di->connector->getDataset($database, $dataset);
+	}
+
+	abstract public function getDatabase(): string;
+	abstract public function getDataset(string $code, array $contractIdentifier): string;
+
+	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier): int {
+		$fields = $contractIdentifier + [
+			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id IN (
+					SELECT exchange_id FROM exchange WHERE main_exchange_code = :exchange_code
+				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
+		];
+		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
+		return $contractId;
+	}
 
 	protected function getExchangeCode(array $contractNameMatches): ?string {
 		if (empty($contractNameMatches['exchangeCode'])) {

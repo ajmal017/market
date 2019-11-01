@@ -33,27 +33,11 @@ class Srf extends \Sharkodlak\Market\Quandl\Futures {
 		return ['instrument_id', 'year', 'month'];
 	}
 
-	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): void {
-		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
-		$data = $this->getData($exchangeInstrument, $year, $month);
-		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $year, $month);
-		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+	public function getDatabase(): string {
+		return self::DATABASE;
 	}
 
-	public function getData(string $code, int $year, int $month): array {
-		$dataset = $code . $this->di->futures->getMonthLetter($month) . $year;
-		return $this->di->connector->getDataset(self::DATABASE, $dataset);
-	}
-
-	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $year, int $month): int {
-		$fields = [
-			'year' => $year,
-			'month' => $month,
-			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id IN (
-					SELECT exchange_id FROM exchange WHERE main_exchange_code = :exchange_code
-				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
-		];
-		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
-		return $contractId;
+	public function getDataset(string $code, array $contractIdentifier): string {
+		return $code . $this->di->futures->getMonthLetter($contractIdentifier['month']) . $contractIdentifier['year'];
 	}
 }
