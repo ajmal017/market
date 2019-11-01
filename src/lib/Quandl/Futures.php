@@ -111,7 +111,7 @@ abstract class Futures {
 		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
 		$data = $this->getData($exchangeInstrument, $contractIdentifier);
 		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $contractIdentifier);
-		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data, $settings);
 	}
 
 	public function getData(string $code, array $contractIdentifier): array {
@@ -133,16 +133,20 @@ abstract class Futures {
 		return $contractId;
 	}
 
-	public function getAndStoreDataCommon(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $contractId, array $data): void {
-		$timeLap = microtime(true);
-		$numberOfRows = count($data['data']);
+	public function getAndStoreDataCommon(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $contractId, array $data, array $settings = []): void {
+		$timeLap = \microtime(true);
+		$numberOfRows = \count($data['data']);
 		$columnNames = $this->translateColumnNames($data['column_names']);
+		$query = "SELECT MAX(date) AS max_date FROM trade_day WHERE contract_id = :contractId";
+		$saved = $db->adapter->query($query, ['contractId' => $contractId]);
 		foreach ($data['data'] as $i => $dailyData) {
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
-			$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
+			if (!empty($settings['reimport']) || $dailyData['date'] > $saved['max_date']) {
+				$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
+			}
 		}
-		$this->di->logger->info(sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
+		$this->di->logger->info(\sprintf(self::IMPORTED_MESSAGE, 100, $i, $numberOfRows) . "\n");
 	}
 
 	public function translateColumnNames(array $originalColumnNames): array {
@@ -154,9 +158,9 @@ abstract class Futures {
 	}
 
 	private function getAndStoreDataInnerLoop(\Sharkodlak\Db\Db $db, float $timeLap, int $numberOfRows, int $i, array $dailyData): float {
-		$timeCurrent = microtime(true);
+		$timeCurrent = \microtime(true);
 		if ($timeCurrent - $timeLap > 1) {
-			$msg = sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows, $i, $numberOfRows);
+			$msg = \sprintf(self::IMPORTED_MESSAGE, 100 * $i / $numberOfRows, $i, $numberOfRows);
 			$this->di->logger->info($msg);
 			$timeLap = $timeCurrent;
 		}

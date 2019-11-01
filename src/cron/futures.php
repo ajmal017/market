@@ -54,6 +54,10 @@ $commando->option('log-level')
 $commando->option('symbol')
 	->describedAs('Import only future contracts with this symbol.')
 	->default(null);
+$commando->option('reimport')
+	->describedAs('Reimport all trade days? Without this flag only new data will be imported.')
+	->boolean()
+	->default(false);
 
 
 define('LOG_LEVEL', $commando['log-level']);
