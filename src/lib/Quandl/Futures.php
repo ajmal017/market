@@ -12,16 +12,16 @@ abstract class Futures {
 		$this->di = $di;
 	}
 
-	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, int $skip = 0): void {
+	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, array $settings = []): void {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
 		foreach ($contracts as $i => $row) {
-			if ($i >= $skip) {
+			if ($i >= ($settings['skip'] ?? 0)) {
 				try {
 					$msg = sprintf("Row %d.", $i);
 					$this->di->logger->debug($msg);
-					$this->getAndStoreContractsInnerLoop($db, $row);
+					$this->getAndStoreContractsInnerLoop($db, $row, $settings);
 				} catch (\Sharkodlak\Exception\HTTPException $e) {
 					$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
 					// Log HTTP status, continue with next contract
@@ -40,7 +40,7 @@ abstract class Futures {
 		return static::DATABASE;
 	}
 
-	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, array $data): void {
+	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, array $data, array $settings = []): void {
 		$contractCodePattern = $this->getContractCodePattern();
 		$contractCodeMatch = \preg_match($contractCodePattern, $data['code'], $data['contractCode']);
 		if (!$contractCodeMatch) {
@@ -59,25 +59,29 @@ abstract class Futures {
 				'name' => $data['contractName']['name'],
 				'symbol' => $data['contractCode']['instrumentSymbol'],
 			];
-			$instrumentData['name_lower'] = \strtolower($instrumentData['name']);
-			$contractIdentifier = $this->getContractIdentifier($data['contractCode'], $data['contractName']);
-			$contractData = $contractIdentifier + [
-				'description' => $data['description'],
-				'refreshed_at' => $data['refreshed_at'],
-				'from_date' => $data['from_date'],
-				'to_date' => $data['to_date'],
-			];
-			$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
-			$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
-			if ($instrument === null) {
-				$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower', 'exchange_id']);
+			if (empty($settings['symbol']) ||
+				\strcasecmp($settings['symbol'], $instrumentData['symbol']) == 0
+			) {
+				$instrumentData['name_lower'] = \strtolower($instrumentData['name']);
+				$contractIdentifier = $this->getContractIdentifier($data['contractCode'], $data['contractName']);
+				$contractData = $contractIdentifier + [
+					'description' => $data['description'],
+					'refreshed_at' => $data['refreshed_at'],
+					'from_date' => $data['from_date'],
+					'to_date' => $data['to_date'],
+				];
+				$instrumentData += $db->adapter->select(['exchange_id'], 'exchange_code', ['code' => $exchangeCode]);
+				$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
+				if ($instrument === null) {
+					$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower', 'exchange_id']);
+				}
+				$contractData['instrument_id'] = $instrument['id'];
+				$uniqueCodeFieldNames = $this->getContractUniqueFieldNames();
+				$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
+				$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
+				$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
+				$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], ...\array_values($contractIdentifier));
 			}
-			$contractData['instrument_id'] = $instrument['id'];
-			$uniqueCodeFieldNames = $this->getContractUniqueFieldNames();
-			$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
-			$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
-			$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
-			$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], ...\array_values($contractIdentifier));
 		}
 	}
 

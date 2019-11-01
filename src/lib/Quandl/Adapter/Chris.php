@@ -28,7 +28,7 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 	}
 
 	protected function getContractNamePattern(): string {
-		return '~^(?P<name>.+?), (?P<meta>Continuous Contract #(?P<depth>\d+).*)$~';
+		return '~^(?P<name>.+?), (?P<meta>Continuous Contract(?: #(?P<depth>\d+))?.*)$~';
 	}
 
 	protected function getContractIdentifier(array $matchesCode, array $matchesName): array {
