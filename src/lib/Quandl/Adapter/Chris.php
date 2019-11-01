@@ -31,6 +31,10 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 		return '~^(?P<name>.+?), (?P<meta>Continuous Contract(?: #(?P<depth>\d+))?.*)$~';
 	}
 
+	protected function getExchangeCode(array $contractNameMatches): ?string {
+		return null;
+	}
+
 	protected function getContractIdentifier(array $matchesCode, array $matchesName): array {
 		return [
 			'depth' => \intval($matchesName['depth'] ?? $matchesCode['depth']),
@@ -39,10 +43,6 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 
 	protected function getContractUniqueFieldNames(): array {
 		return ['instrument_id', 'depth'];
-	}
-
-	protected function getExchangeCode(array $contractNameMatches): ?string {
-		return null;
 	}
 
 	public function getDatabase(): string {

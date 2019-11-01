@@ -84,13 +84,26 @@ abstract class Futures {
 				$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 				$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 				$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
-				$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractIdentifier);
+				$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractIdentifier, $settings);
 			}
 		}
 	}
 
 	abstract protected function getContractCodePattern(): string;
 	abstract protected function getContractNamePattern(): string;
+
+	protected function getExchangeCode(array $contractNameMatches): ?string {
+		if (empty($contractNameMatches['exchangeCode'])) {
+			if (!in_array($contractNameMatches['instrumentName'], $this->loggedContractNames)) {
+				$msg = sprintf('Missing exchange code in "%s"!', $contractNameMatches[0]);
+				$this->di->logger->notice($msg);
+				$this->loggedContractNames[] = $contractNameMatches['instrumentName'];
+			}
+			return null;
+		}
+		return $contractNameMatches['exchangeCode'];
+	}
+
 	abstract protected function getContractIdentifier(array $matchesCode, array $matchesName): array;
 	abstract protected function getContractUniqueFieldNames(): array;
 
@@ -118,18 +131,6 @@ abstract class Futures {
 		];
 		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
 		return $contractId;
-	}
-
-	protected function getExchangeCode(array $contractNameMatches): ?string {
-		if (empty($contractNameMatches['exchangeCode'])) {
-			if (!in_array($contractNameMatches['instrumentName'], $this->loggedContractNames)) {
-				$msg = sprintf('Missing exchange code in "%s"!', $contractNameMatches[0]);
-				$this->di->logger->notice($msg);
-				$this->loggedContractNames[] = $contractNameMatches['instrumentName'];
-			}
-			return null;
-		}
-		return $contractNameMatches['exchangeCode'];
 	}
 
 	public function getAndStoreDataCommon(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $contractId, array $data): void {
