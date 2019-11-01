@@ -12,12 +12,12 @@ abstract class Futures {
 		$this->di = $di;
 	}
 
-	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, int $skip = 0): void {
+	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, array $settings): void {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
 		foreach ($contracts as $i => $row) {
-			if ($i >= $skip) {
+			if ($i >= $settings['skip'] ?: 0) {
 				try {
 					$msg = sprintf("Row %d.", $i);
 					$this->di->logger->debug($msg);

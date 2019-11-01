@@ -117,4 +117,4 @@ $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 $dbAdapter = new \Sharkodlak\Db\Adapter\Postgres($pdo, $di);
 $db = new \Sharkodlak\Db\Db($di, $dbAdapter);
 $futures = new Sharkodlak\Market\Quandl\Adapter\Chris($di);
-$futures->getAndStoreContracts($db, $commando['skip']);
+$futures->getAndStoreContracts($db, iterator_to_array($commando));
