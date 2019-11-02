@@ -108,7 +108,7 @@ $di = new class($apiKey) implements \Sharkodlak\Db\Di, \Sharkodlak\Db\Adapter\Di
 				$logLevelName = \strtoupper(LOG_LEVEL);
 				if ($level >= \constant("\\Psr\\Log\\LogLevel::$logLevelName")) {
 					$styleStart = self::$bashStyle[$level] ?? self::$defaultBashStyle;
-					$message = $styleStart . $message . self::$defaultBashStyleEnd;
+					$message = "\n" . $styleStart . $message . self::$defaultBashStyleEnd;
 					fputs(STDERR, $message);
 				}
 			}

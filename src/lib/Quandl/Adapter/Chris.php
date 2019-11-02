@@ -11,7 +11,9 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 		'Low' => 'low',
 		'Settle' => 'settle',
 		'Previous Settlement' => 'previous_settlement',
+		'Prev. Day Settlement Price' => 'previous_settlement',
 		'Change' => 'change',
+		'Net Change' => 'change',
 		'Wave' => 'wave',
 		'Volume' => 'volume',
 		'Open Interest' => 'open_interest',
@@ -21,10 +23,13 @@ class Chris extends \Sharkodlak\Market\Quandl\Futures {
 		'EFS Volume' => 'efs_volume',
 		'Block Volume' => 'block_volume',
 		'Last' => 'last',
+		'Last Traded' => 'last',
+		'Bid' => 'bid',
+		'Ask' => 'ask',
 	];
 
 	protected function getContractCodePattern(): string {
-		return '~^(?P<exchangeCode>[^_]+)_(?P<contractCode>(?P<instrumentSymbol>.+)(?P<depth>\d))$~i';
+		return '~^(?P<exchangeCode>[^_]+)_(?P<contractCode>(?P<instrumentSymbol>.+?)(?P<depth>\d+))$~i';
 	}
 
 	protected function getContractNamePattern(): string {
