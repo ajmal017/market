@@ -35,22 +35,25 @@ $commando->option('skip')
 	->map(function($skip) {
 		return \intval($skip);
 	});
+$logLevels = [
+	-5 => \Psr\Log\LogLevel::EMERGENCY,
+	-4 => \Psr\Log\LogLevel::ALERT,
+	-3 => \Psr\Log\LogLevel::CRITICAL,
+	-2 => \Psr\Log\LogLevel::ERROR,
+	-1 => \Psr\Log\LogLevel::WARNING,
+	0 => \Psr\Log\LogLevel::NOTICE,
+	1 => \Psr\Log\LogLevel::INFO,
+	2 => \Psr\Log\LogLevel::DEBUG,
+];
+$commando->flag('v')
+	->title('Logging verbosity')
+	->describedAs('Repeat flag for more detailed log level. Use this flag to easily switch --log-level to "info" or "debug".')
+	->increment(2);
 $commando->option('log-level')
-	->describedAs('Print logs with this or higher level to STDERR. Default is "notice" level.')
-	->must(function($logLevel) {
-		$levels = [
-			\Psr\Log\LogLevel::EMERGENCY,
-			\Psr\Log\LogLevel::ALERT,
-			\Psr\Log\LogLevel::CRITICAL,
-			\Psr\Log\LogLevel::ERROR,
-			\Psr\Log\LogLevel::WARNING,
-			\Psr\Log\LogLevel::NOTICE,
-			\Psr\Log\LogLevel::INFO,
-			\Psr\Log\LogLevel::DEBUG,
-		];
-		return \in_array(\strtolower($logLevel), $levels);
-	})
-	->default(\Psr\Log\LogLevel::NOTICE);
+	->describedAs('Print logs with this or higher level to STDERR. Default is "notice" level. Flag -v is ignored if this option is used.')
+	->must(function($logLevel) use ($logLevels) {
+		return \in_array(\strtolower($logLevel), $logLevels);
+	});
 $commando->option('symbol')
 	->describedAs('Import only future contracts with this symbol.')
 	->default(null);
@@ -59,8 +62,7 @@ $commando->option('reimport')
 	->boolean()
 	->default(false);
 
-
-define('LOG_LEVEL', $commando['log-level']);
+define('LOG_LEVEL', $commando['log-level'] ?? $logLevels[$commando['v']]);
 
 const DB_CONNECT = '/etc/webconf/market/connect.powerUser.pgsql';
 const QUANDL_API_KEY = '/etc/webconf/quandl.api.key';
