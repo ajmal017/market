@@ -89,7 +89,7 @@ abstract class Futures {
 					$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 					$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 					$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
-					$this->getAndStoreData($db, $exchange['main_exchange_code'], $instrumentData['symbol'], $contractIdentifier, $settings);
+					$this->getAndStoreData($db, $exchange['main_exchange_code'] ?? $exchangeCode, $instrumentData['symbol'], $contractIdentifier, $settings);
 				}
 			}
 		}
