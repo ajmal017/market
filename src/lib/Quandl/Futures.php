@@ -6,28 +6,30 @@ namespace Sharkodlak\Market\Quandl;
 abstract class Futures {
 	const IMPORTED_MESSAGE = "Imported %02d%% (%d/%d). ";
 	protected $di;
+	protected $settings;
 	private $loggedContractNames = [];
 
-	public function __construct(Di $di) {
+	public function __construct(Di $di, array $settings = []) {
 		$this->di = $di;
+		$settings['batch'] = (int) $settings['batch'] ?? PHP_INT_MAX;
+		$settings['skip'] = (int) $settings['skip'] ?? 0;
+		$this->settings = $settings;
 	}
 
-	public function getAndStoreContracts(\Sharkodlak\Db\Db $db, array $settings = []): void {
+	public function getAndStoreContracts(\Sharkodlak\Db\Db $db): void {
 		$contracts = $this->getContracts();
 		$numberOfRows = count($contracts);
 		$this->di->initProgressBar(0, $numberOfRows);
-		$settings['batch'] = (int) $settings['batch'] ?? PHP_INT_MAX;
-		$settings['skip'] = (int) $settings['skip'] ?? 0;
 		foreach ($contracts as $i => $row) {
 			$this->di->progressBar->update($i);
-			if ($i >= $settings['skip']) {
-				if ($i >= $settings['skip'] + $settings['batch']) {
+			if ($i >= $this->settings['skip']) {
+				if ($i >= $this->settings['skip'] + $this->settings['batch']) {
 					break;
 				}
 				try {
 					$msg = sprintf("Row %d.", $i);
 					$this->di->logger->debug($msg);
-					$this->getAndStoreContractsInnerLoop($db, $row, $settings);
+					$this->getAndStoreContractsInnerLoop($db, $row);
 				} catch (\Sharkodlak\Exception\HTTPException $e) {
 					$this->di->logger->warning($e->getCode() . ': ' . $e->getMessage(), $row);
 				}
@@ -44,7 +46,7 @@ abstract class Futures {
 		return static::DATABASE;
 	}
 
-	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, array $data, array $settings = []): void {
+	private function getAndStoreContractsInnerLoop(\Sharkodlak\Db\Db $db, array $data): void {
 		$contractCodePattern = $this->getContractCodePattern();
 		$contractCodeMatch = \preg_match($contractCodePattern, $data['code'], $data['contractCode']);
 		if (!$contractCodeMatch) {
@@ -63,8 +65,8 @@ abstract class Futures {
 				'name' => $data['contractName']['name'],
 				'symbol' => $data['contractCode']['instrumentSymbol'],
 			];
-			if (empty($settings['symbol']) ||
-				\strcasecmp($settings['symbol'], $instrumentData['symbol']) == 0
+			if (empty($this->settings['symbol']) ||
+				\strcasecmp($this->settings['symbol'], $instrumentData['symbol']) == 0
 			) {
 				$instrumentData['name_lower'] = \strtolower($instrumentData['name']);
 				$contractIdentifier = $this->getContractIdentifier($data['contractCode'], $data['contractName']);
@@ -89,7 +91,7 @@ abstract class Futures {
 					$updateSetFieldNames = \array_diff(array_keys($contractData), $uniqueCodeFieldNames);
 					$contract = $db->adapter->upsert(['id'], 'contract', $contractData, $updateSetFieldNames, $uniqueCodeFieldNames);
 					$exchange = $db->adapter->select(['main_exchange_code'], 'exchange', ['id' => $instrumentData['exchange_id']]);
-					$this->getAndStoreData($db, $exchange['main_exchange_code'] ?? $exchangeCode, $instrumentData['symbol'], $contractIdentifier, $settings);
+					$this->getAndStoreData($db, $exchange['main_exchange_code'] ?? $exchangeCode, $instrumentData['symbol'], $contractIdentifier);
 				}
 			}
 		}
@@ -113,11 +115,11 @@ abstract class Futures {
 	abstract protected function getContractIdentifier(array $matchesCode, array $matchesName): array;
 	abstract protected function getContractUniqueFieldNames(): array;
 
-	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier, array $settings = []): void {
+	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier): void {
 		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
 		$data = $this->getData($exchangeInstrument, $contractIdentifier);
 		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $contractIdentifier);
-		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data, $settings);
+		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
 	}
 
 	public function getData(string $code, array $contractIdentifier): array {
@@ -139,7 +141,7 @@ abstract class Futures {
 		return $contractId;
 	}
 
-	public function getAndStoreDataCommon(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $contractId, array $data, array $settings = []): void {
+	public function getAndStoreDataCommon(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, int $contractId, array $data): void {
 		$timeLap = \microtime(true);
 		$numberOfRows = \count($data['data']);
 		$columnNames = $this->translateColumnNames($data['column_names']);
@@ -148,7 +150,7 @@ abstract class Futures {
 		foreach ($data['data'] as $i => $dailyData) {
 			$dailyData = \array_combine($columnNames, $dailyData);
 			$dailyData['contract_id'] = $contractId;
-			if (!empty($settings['reimport']) || $dailyData['date'] > $saved['max_date']) {
+			if (!empty($this->settings['reimport']) || $dailyData['date'] > $saved['max_date']) {
 				$timeLap = $this->getAndStoreDataInnerLoop($db, $timeLap, $numberOfRows, ++$i, $dailyData);
 			}
 		}

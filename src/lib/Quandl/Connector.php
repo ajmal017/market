@@ -7,12 +7,17 @@ class Connector {
 	const DATABASE_METADATA_URL = 'https://www.quandl.com/api/v3/databases/%s/metadata?api_key=%s';
 	const DATASET_URL = 'https://www.quandl.com/api/v3/datasets/%s/%s.json?api_key=%s';
 	private $di;
+	private $settings;
 
-	public function __construct(Di $di) {
+	public function __construct(Di $di, array $settings = []) {
 		$this->di = $di;
+		$this->settings = $settings;
 	}
 
 	public function downloadFileIfMissing(string $url, string $filename): string {
+		if (!empty($this->settings['offline'])) {
+			return $filename;
+		}
 		$headerFilename = "$filename.head";
 		$curlOptions = [
 			CURLOPT_FILETIME => true,
