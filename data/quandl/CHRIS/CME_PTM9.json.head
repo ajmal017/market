@@ -1,7 +1,7 @@
 HTTP/2 200 
-date: Sun, 20 Oct 2019 00:07:48 GMT
+date: Sat, 02 Nov 2019 08:37:30 GMT
 content-type: application/json; charset=utf-8
-set-cookie: __cfduid=d83897350d72c995f932fdd701e179f821571530067; expires=Mon, 19-Oct-20 00:07:47 GMT; path=/; domain=.quandl.com; HttpOnly
+set-cookie: __cfduid=deff83b7e785051c3976947237bc7313b1572683850; expires=Sun, 01-Nov-20 08:37:30 GMT; path=/; domain=.quandl.com; HttpOnly
 allow: GET, HEAD, POST, PUT, DELETE, OPTIONS, PATCH
 cache-control: max-age=0, private, must-revalidate
 etag: W/"9b62007506451a6162a65337d95c905f"
@@ -10,12 +10,12 @@ x-content-type-options: nosniff
 x-frame-options: SAMEORIGIN
 x-rack-cors: miss; no-origin
 x-ratelimit-limit: 50000
-x-ratelimit-remaining: 47565
-x-request-id: 8573860c-c5fe-4016-9e76-03778d971fe8
-x-runtime: 0.107573
+x-ratelimit-remaining: 48084
+x-request-id: 6bca81df-ddb9-4bf9-bd0a-cf01057e5667
+x-runtime: 0.126384
 x-xss-protection: 1; mode=block
 cf-cache-status: DYNAMIC
 expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
 server: cloudflare
-cf-ray: 5286c0eb3edc8cc2-VIE
+cf-ray: 52f4c972ea99cbcc-VIE
 
