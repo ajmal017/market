@@ -1,0 +1,21 @@
+HTTP/2 200 
+date: Sun, 03 Nov 2019 19:00:24 GMT
+content-type: application/json; charset=utf-8
+set-cookie: __cfduid=d4cce3046c8ef7e8625dc049710ee8f8b1572807623; expires=Mon, 02-Nov-20 19:00:23 GMT; path=/; domain=.quandl.com; HttpOnly
+allow: GET, HEAD, POST, PUT, DELETE, OPTIONS, PATCH
+cache-control: max-age=0, private, must-revalidate
+etag: W/"cbe0abdfad1750504dacbb3be9a8a2b1"
+vary: Origin
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-rack-cors: miss; no-origin
+x-ratelimit-limit: 50000
+x-ratelimit-remaining: 49546
+x-request-id: f8cd4036-55a0-48c9-a6c7-fd08f204420a
+x-runtime: 0.572076
+x-xss-protection: 1; mode=block
+cf-cache-status: DYNAMIC
+expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+server: cloudflare
+cf-ray: 530097408e54cbbc-VIE
+
