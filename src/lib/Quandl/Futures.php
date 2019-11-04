@@ -35,6 +35,7 @@ abstract class Futures {
 				}
 			}
 		}
+		$this->di->progressBar->advance();
 	}
 
 	public function getContracts(): array {
@@ -116,10 +117,14 @@ abstract class Futures {
 	abstract protected function getContractUniqueFieldNames(): array;
 
 	public function getAndStoreData(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier): void {
-		$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
-		$data = $this->getData($exchangeInstrument, $contractIdentifier);
-		$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $contractIdentifier);
-		$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+		try {
+			$exchangeInstrument = $exchangeCode . '_' . $instrumentSymbol;
+			$data = $this->getData($exchangeInstrument, $contractIdentifier);
+			$contractId = $this->getContractId($db, $exchangeCode, $instrumentSymbol, $contractIdentifier);
+			$this->getAndStoreDataCommon($db, $exchangeCode, $instrumentSymbol, $contractId, $data);
+		} catch (\Exception $e) {
+			$this->di->logger->warning($e->getMessage());
+		}
 	}
 
 	public function getData(string $code, array $contractIdentifier): array {
@@ -159,6 +164,14 @@ abstract class Futures {
 
 	public function translateColumnNames(array $originalColumnNames): array {
 		$columnNames = [];
+		$unknownColumns = \array_diff($originalColumnNames, \array_keys(static::$columnNames));
+		if ($unknownColumns) {
+			$msg = \sprintf(
+				'Unknown field names: [%s]!',
+				\implode(', ', $unknownColumns)
+			);
+			throw new \Sharkodlak\Exception\NoSuchElementException($msg);
+		}
 		foreach ($originalColumnNames as $key => $columnName) {
 			$columnNames[$key] = static::$columnNames[$columnName] ?? $columnName;
 		}

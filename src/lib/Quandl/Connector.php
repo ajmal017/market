@@ -85,6 +85,12 @@ class Connector {
 		$url = \sprintf(self::DATASET_URL, $database, $dataset, $this->di->apiKey);
 		$filePath = $this->di->rootDir . "/data/quandl/$database/$dataset.json";
 		$filename = $this->downloadFileIfMissing($url, $filePath);
+		if (!file_exists($filename)) {
+			$msg = sprintf('File "%s" not found!', $filename);
+			$e = new \Sharkodlak\Exception\FileNotFoundException($msg);
+			$e->filename = $filename;
+			throw $e;
+		}
 		$json = \file_get_contents($filename);
 		$data = \json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 		return $data['dataset'];
