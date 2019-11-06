@@ -1,7 +1,9 @@
 apt-get install -y apt-transport-https lsb-release ca-certificates
 
+curl -s "https://packagecloud.io/install/repositories/phalcon/stable/script.deb.sh" | sudo bash
+
 apt-get update
-apt-get install -y curl git nginx php7.3-fpm php-curl php-mbstring php-pgsql php-xml php-zip unzip zip
+apt-get install -y curl git nginx php7.3-fpm php7.3-phalcon php-curl php-gettext php-mbstring php-pgsql php-xml php-zip unzip zip
 
 if [ ! -e /usr/local/bin/composer ]; then
 	php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
