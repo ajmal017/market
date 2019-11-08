@@ -25,7 +25,7 @@ $di->set('view', function () {
 			$volt = new \Phalcon\Mvc\View\Engine\Volt($view, $di);
 			$volt->setOptions([
 				'compiledPath' => APP_PATH . '/cache/',
-				'compiledExtension' => '.compiled',
+				'compiledExtension' => '.php',
 				'path' => function ($templatePath) {
 					exit("This Phalcon's version works with 'path' instead of 'compiledPath'.");
 					return APP_PATH . '/cache/';
@@ -47,7 +47,6 @@ try {
 	$response = $application->handle($_SERVER['REQUEST_URI']);
 	$response->send();
 } catch (\Exception $e) {
-	echo Phalcon\Version::get();
 	echo 'Exception: ', $e->getMessage();
 }
 
