@@ -16,16 +16,27 @@ $di = new \Phalcon\Di\FactoryDefault();
 $di->set('db', function () {
 	$pdo = new \PDO('uri:file://' . DB_CONNECT);
 	$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+	return $pdo;
 });
 $di->set('view', function () {
+	$viewsDir = APP_PATH . '/views/';
 	$view = new \Phalcon\Mvc\View();
-	$view->setViewsDir(APP_PATH . '/views/');
+	$view->setViewsDir($viewsDir);
 	$view->registerEngines([
-		'.volt' => function ($view, $di) {
+		'.volt' => function ($view, $di) use ($viewsDir) {
 			$volt = new \Phalcon\Mvc\View\Engine\Volt($view, $di);
 			$volt->setOptions([
-				'compiledPath' => APP_PATH . '/cache/',
-				'compiledExtension' => '.php',
+				'compiledPath' => function ($templatePath) use ($viewsDir) {
+					$absDirName = \dirname($templatePath);
+					$templateName = \substr($templatePath, 1 + \strlen($absDirName));
+					$dirName = \substr($absDirName, \strlen($viewsDir));
+					$cacheDir = APP_PATH . '/cache/';
+					$cacheDirName = $cacheDir . $dirName;
+					if (!\is_dir($cacheDirName)) {
+						\mkdir($cacheDirName, 0664, true);
+					}
+					return $cacheDirName . '/'. $templateName . '.php';
+				},
 				'path' => function ($templatePath) {
 					exit("This Phalcon's version works with 'path' instead of 'compiledPath'.");
 					return APP_PATH . '/cache/';
