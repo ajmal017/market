@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
@@ -14,8 +14,20 @@ $loader->register();
 
 $di = new \Phalcon\Di\FactoryDefault();
 $di->set('db', function () {
-	$pdo = new \PDO('uri:file://' . DB_CONNECT);
-	$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+	$fp = \fopen(DB_CONNECT, 'r');
+	$dbConnect = \fgets($fp);
+	$dbConnect = \substr($dbConnect, 0, -1);
+	$optionNameTranslate = [
+		'user' => 'username',
+	];
+	[$type, $options] = \explode(':', $dbConnect);
+	foreach (\explode(';', $options) as $option) {
+		[$name, $value] = \explode('=', $option);
+		$name = $optionNameTranslate[$name] ?: $name;
+		$settings[$name] = $value;
+	}
+	$pdo = new \Phalcon\Db\Adapter\Pdo\PostgreSQL($settings);
+	//$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 	return $pdo;
 });
 $di->set('view', function () {
