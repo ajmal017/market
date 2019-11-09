@@ -17,17 +17,14 @@ $di->set('db', function () {
 	$fp = \fopen(DB_CONNECT, 'r');
 	$dbConnect = \fgets($fp);
 	$dbConnect = \substr($dbConnect, 0, -1);
-	$optionNameTranslate = [
-		'user' => 'username',
-	];
+	$optionNameTranslate = ['user' => 'username'];
 	[$type, $options] = \explode(':', $dbConnect);
 	foreach (\explode(';', $options) as $option) {
 		[$name, $value] = \explode('=', $option);
-		$name = $optionNameTranslate[$name] ?: $name;
+		$name = $optionNameTranslate[$name] ?? $name;
 		$settings[$name] = $value;
 	}
 	$pdo = new \Phalcon\Db\Adapter\Pdo\PostgreSQL($settings);
-	//$pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 	return $pdo;
 });
 $di->set('view', function () {
@@ -74,12 +71,6 @@ try {
 }
 
 
-/*
-$sql = 'SELECT exchange.name AS exchange_name, instrument.* FROM exchange JOIN instrument ON instrument.exchange_id = exchange.id ORDER BY exchange.name, instrument.name';
-$result = $pdo->query($sql);
-while ($row = $result->fetch(\PDO::FETCH_ASSOC)) {
-	var_dump($row);
-}
 /*
 <!DOCTYPE HTML>
 <html>
