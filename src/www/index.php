@@ -27,6 +27,30 @@ $di->set('db', function () {
 	$pdo = new \Phalcon\Db\Adapter\Pdo\PostgreSQL($settings);
 	return $pdo;
 });
+$di->set('router', function () {
+	$convertController = function (string $oldName, int $skip = 0): string {
+		$names = \preg_split('~[-_]~', $oldName);
+		foreach ($names as $i => &$name) {
+			if ($i >= $skip) {
+				$name = \ucfirst($name);
+			}
+		}
+		return \implode('', $names);
+	};
+	$convertAction = function (string $oldName) use ($convertController): string {
+		return $convertController($oldName, 1);
+	};
+	$router = new \Phalcon\Mvc\Router(false);
+	$route = $router->add('/:controller/:action/:params', [
+		'controller' => 1,
+		'action' => 2,
+		'params' => 3,
+	]);
+	$route->convert('controller', $convertController)
+		->convert('action', $convertAction);
+	$router->handle($_SERVER['REQUEST_URI']);
+	return $router;
+});
 $di->set('view', function () {
 	$viewsDir = APP_PATH . '/views/';
 	$view = new \Phalcon\Mvc\View();
