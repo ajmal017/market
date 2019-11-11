@@ -2,15 +2,24 @@
 
 class GraphController extends \Phalcon\Mvc\Controller {
 	public function priceHistoryAction(string $symbol) {
-		exit(__FILE__);
-		$this->view->tradeDays = TradeDay::find([
-			'conditions' => [
-				'symbol = :symbol:',
-			],
+		$instrument = Instrument::findFirst([
+			'conditions' => 'symbol = :symbol:',
 			'bind' => [
 				'symbol' => $symbol,
 			],
-			'order' => 'symbol',
+		]);
+		$contract = Contract::findFirst([
+			'conditions' => 'instrument_id = :instrument_id: AND depth = 1',
+			'bind' => [
+				'instrument_id' => $instrument->id,
+			],
+		]);
+		$this->view->tradeDays = TradeDay::find([
+			'conditions' => 'contract_id = :contract_id:',
+			'bind' => [
+				'contract_id' => $contract->id,
+			],
+			'order' => 'date',
 		]);
 	}
 }

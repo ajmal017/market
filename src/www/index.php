@@ -28,17 +28,14 @@ $di->set('db', function () {
 	return $pdo;
 });
 $di->set('router', function () {
-	$convertController = function (string $oldName, int $skip = 0): string {
+	$convert = function (string $oldName): string {
 		$names = \preg_split('~[-_]~', $oldName);
 		foreach ($names as $i => &$name) {
-			if ($i >= $skip) {
+			if ($i >= 1) {
 				$name = \ucfirst($name);
 			}
 		}
 		return \implode('', $names);
-	};
-	$convertAction = function (string $oldName) use ($convertController): string {
-		return $convertController($oldName, 1);
 	};
 	$router = new \Phalcon\Mvc\Router(false);
 	$route = $router->add('/:controller/:action/:params', [
@@ -46,8 +43,7 @@ $di->set('router', function () {
 		'action' => 2,
 		'params' => 3,
 	]);
-	$route->convert('controller', $convertController)
-		->convert('action', $convertAction);
+	$route->convert('action', $convert);
 	$router->handle($_SERVER['REQUEST_URI']);
 	return $router;
 });
@@ -68,7 +64,7 @@ $di->set('view', function () {
 					if (!\is_dir($cacheDirName)) {
 						\mkdir($cacheDirName, 0664, true);
 					}
-					return $cacheDirName . '/'. $templateName . '.php';
+					return $cacheDirName . $templateName . '.php';
 				},
 				'path' => function ($templatePath) {
 					exit("This Phalcon's version works with 'path' instead of 'compiledPath'.");
