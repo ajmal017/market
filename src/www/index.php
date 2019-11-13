@@ -64,7 +64,7 @@ $di->set('view', function () {
 					if (!\is_dir($cacheDirName)) {
 						\mkdir($cacheDirName, 0664, true);
 					}
-					return $cacheDirName . $templateName . '.php';
+					return $cacheDirName . '/' . $templateName . '.php';
 				},
 				'path' => function ($templatePath) {
 					exit("This Phalcon's version works with 'path' instead of 'compiledPath'.");
@@ -89,44 +89,3 @@ try {
 } catch (\Exception $e) {
 	echo 'Exception: ', $e->getMessage();
 }
-
-
-/*
-<!DOCTYPE HTML>
-<html>
-<head>
-<script>
-window.onload = function() {
-
-var chart = new CanvasJS.Chart("chartContainer", {
-	title: {
-		text: "Ericsson Stock Price - December 2017"
-	},
-	subtitles: [{
-		text: "Currency in Swedish Krona"
-	}],
-	axisX: {
-		valueFormatString: "DD MMM"
-	},
-	axisY: {
-		includeZero: false,
-		suffix: " kr"
-	},
-	data: [{
-		type: "candlestick",
-		xValueType: "dateTime",
-		yValueFormatString: "#,##0.0 kr",
-		xValueFormatString: "DD MMM",
-		dataPoints: <?php echo json_encode($dataPoints, JSON_NUMERIC_CHECK); ?>
-	}]
-});
-chart.render();
-
-}
-</script>
-</head>
-<body>
-<div id="chartContainer" style="height: 370px; width: 100%;"></div>
-<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
-</body>
-</html>

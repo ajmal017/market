@@ -8,4 +8,8 @@ class TradeDay extends \Phalcon\Mvc\Model {
 	public $low;
 	public $close;
 	public $volume;
+
+	public function getTime() {
+		return \strtotime($this->date);
+	}
 }
