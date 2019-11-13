@@ -15,21 +15,20 @@
 			text: "{{ instrument.contract_volume }}"
 		}],
 		axisX: {
-			valueFormatString: "DD MMM"
+			valueFormatString: "DD MMM YYYY"
 		},
 		axisY: {
 			includeZero: false,
-			suffix: " [?]"
+			suffix: " USD"
 		},
 		data: [{
 			type: "candlestick",
 			xValueType: "dateTime",
-			yValueFormatString: "#,##0.0 kr",
-			xValueFormatString: "DD MMM",
-			dataPoints: [
-			{% for tradeDay in tradeDays %}
+			yValueFormatString: "#,##0.0 USD",
+			xValueFormatString: "DD MMM YYYY",
+			dataPoints: [{% for tradeDay in tradeDays %}
 				{
-					'x': {{ tradeDay.getTime() }},
+					'x': {{ tradeDay.getTime() * 1000 }},
 					'y': [
 						{{ tradeDay.open }},
 						{{ tradeDay.high }},
@@ -37,11 +36,7 @@
 						{{ tradeDay.settle }}
 					]
 				}{% if !loop.last %},{% endif %}
-				{% if loop.index0 > 5 %}
-					{% break %}
-				{% endif %}
-			{% endfor %}
-			]
+			{% endfor %}]
 		}]
 	});
 	chart.render();
