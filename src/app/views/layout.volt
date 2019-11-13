@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Marge: {{ title | default('Home') }}</title>
+    <title>Margeen: {% block title %}Home{% endblock %}</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    {% block head %}
+    {% endblock %}
 </head>
 <body>
 
-<h1>{{ title | default('Home') }}</h1>
-{{ content() }}
+<h1>{% block heading %}Home{% endblock %}</h1>
+{% block content %}
+{% endblock %}
 
 </body>
 </html>
