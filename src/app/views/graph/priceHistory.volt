@@ -9,7 +9,7 @@
 
 	var chart = new CanvasJS.Chart("chartContainer", {
 		title: {
-			text: "{{ instrument.symbol }}"
+			text: "{{ instrument.symbol }} ({{ contract.id }})"
 		},
 		subtitles: [{
 			text: "{{ instrument.contract_volume }}"
@@ -28,7 +28,7 @@
 			xValueFormatString: "DD MMM YYYY",
 			dataPoints: [{% for tradeDay in tradeDays %}
 				{
-					'x': {{ tradeDay.getTime() * 1000 }},
+					'x': {{ tradeDay.getTime() }} * 1000,
 					'y': [
 						{{ tradeDay.open }},
 						{{ tradeDay.high }},
@@ -46,7 +46,6 @@
 {% endblock %}
 
 {% block content %}
-{{ dump(contract.id) }}
 <div id="chartContainer" style="height: 370px; width: 100%;"></div>
 <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 {% endblock %}

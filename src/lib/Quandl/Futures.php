@@ -82,7 +82,11 @@ abstract class Futures {
 					$this->di->logger->warning($msg);
 				} else {
 					$instrumentData += $exchangeCodeRow;
-					$instrument = $db->adapter->select(['id'], 'instrument', ['symbol' => $data['contractCode']['instrumentSymbol']]);
+					$instrumentFilter = [
+						'exchange_id' => $exchangeCodeRow['exchange_id'],
+						'symbol' => $data['contractCode']['instrumentSymbol'],
+					];
+					$instrument = $db->adapter->select(['id'], 'instrument', $instrumentFilter);
 					if ($instrument === null) {
 						$instrument = $db->adapter->upsert(['id'], 'instrument', $instrumentData, ['symbol'], ['name_lower', 'exchange_id']);
 					}
@@ -138,7 +142,7 @@ abstract class Futures {
 	private function getContractId(\Sharkodlak\Db\Db $db, string $exchangeCode, string $instrumentSymbol, array $contractIdentifier): int {
 		$fields = $contractIdentifier + [
 			'instrument_id' => $db->query('SELECT id FROM instrument WHERE symbol = :instrument_symbol AND exchange_id IN (
-					SELECT exchange_id FROM exchange WHERE main_exchange_code = :exchange_code
+					SELECT id FROM exchange WHERE main_exchange_code = :exchange_code
 				)')->setParams(['exchange_code' => $exchangeCode, 'instrument_symbol' => $instrumentSymbol]),
 		];
 		['id' => $contractId] = $db->adapter->insertOrSelect(['id'], 'contract', $fields, array_keys($fields));
